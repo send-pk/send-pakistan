@@ -67,6 +67,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
     const scannerRef = useRef<any>(null);
+    const processingScan = useRef(false);
     const scanRegionId = "driver-scan-region";
     const [showSuccessFeedback, setShowSuccessFeedback] = useState(false);
 
@@ -190,13 +191,21 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
         return [];
     };
 
-    const handleCloseScannerModal = useCallback(() => { setIsScannerOpen(false); setScanError(null); }, []);
+    const handleCloseScannerModal = useCallback(() => {
+        setIsScannerOpen(false);
+        setScanError(null);
+        processingScan.current = false;
+    }, []);
     
     const onScanSuccess = useCallback(async (decodedText: string) => {
+        if (processingScan.current) return;
+        processingScan.current = true;
+
         const foundParcel = assignedParcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
 
         if (!foundParcel) {
             setScanError('Scan failed: Parcel not found in your assigned tasks list.');
+            processingScan.current = false;
             return;
         }
 
@@ -222,6 +231,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
             }
         } else {
             setScanError(`Scan invalid: Parcel not ready for your action. Current status: "${foundParcel.status}".`);
+            processingScan.current = false;
         }
     }, [handleCloseScannerModal, user, updateParcelStatus]);
     

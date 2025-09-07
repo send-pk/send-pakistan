@@ -38,7 +38,6 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, parcels, brandD
                 <div className="text-right">
                     <h1 className="text-3xl font-bold text-gray-800">INVOICE</h1>
                     <p className="mt-1 text-gray-600 text-xs"><strong>Invoice #:</strong> {invoice.id.toUpperCase()}</p>
-                    {/* FIX: Corrected typo from `toLocaleDate-String` to `toLocaleDateString`. */}
                     <p className="text-gray-600 text-xs"><strong>Date:</strong> {new Date(invoice.generatedAt).toLocaleDateString()}</p>
                 </div>
             </header>

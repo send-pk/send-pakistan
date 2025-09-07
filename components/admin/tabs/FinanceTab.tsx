@@ -20,7 +20,6 @@ import { InvoiceDownloadModal } from '../InvoiceDownloadModal';
 
 const formatDatePKT = (dateString: string) => new Date(dateString).toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
 const FormInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} className={`w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors disabled:bg-border ${props.className || ''}`} />;
-// FIX: The original FormLabel component did not accept a 'className' prop, causing a type error when it was used with one. The definition has been updated to accept and apply a 'className'.
 const FormLabel = ({ children, htmlFor, className }: { children: React.ReactNode, htmlFor?: string, className?: string }) => <label htmlFor={htmlFor} className={`block mb-2 text-sm text-content-secondary font-medium ${className || ''}`}>{children}</label>;
 
 

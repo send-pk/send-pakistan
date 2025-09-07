@@ -23,7 +23,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         e.preventDefault();
         const foundParcel = parcels.find(p => p.trackingNumber.toLowerCase() === trackingNumber.toLowerCase().trim());
         if (foundParcel) {
-            // FIX: Added missing 'status' property to conform to User type.
             const customerUser: User = { id: 'customer-temp', name: foundParcel.recipientName, email: 'customer@temp.com', role: UserRole.CUSTOMER, status: 'ACTIVE' };
             onLogin(customerUser, foundParcel);
         } else {
