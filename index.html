@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233B82F6'%3E%3Cpath d='M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z'/%3E%3C/svg%3E" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEND Courier Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/jsbarcode@latest/dist/JsBarcode.all.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <style>
+      :root {
+        /* Light Theme */
+        --color-background-rgb: 255 255 255; /* #FFFFFF */
+        --color-surface-rgb: 255 255 255; /* #FFFFFF */
+        --color-border-rgb: 228 228 231;
+        --color-primary-rgb: 59 130 246;
+        --color-primary-dark-rgb: 29 78 216;
+        --color-content-primary-rgb: 17 24 39;
+        --color-content-secondary-rgb: 75 85 99;
+        --color-content-muted-rgb: 156 163 175;
+      }
+      .dark {
+        /* Dark Theme */
+        --color-background-rgb: 17 24 39;
+        --color-surface-rgb: 29 42 62;
+        --color-border-rgb: 55 65 81;
+        --color-primary-rgb: 96 165 250;
+        --color-primary-dark-rgb: 59 130 246;
+        --color-content-primary-rgb: 243 244 246;
+        --color-content-secondary-rgb: 156 163 175;
+        --color-content-muted-rgb: 107 114 128;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              background: 'rgb(var(--color-background-rgb) / <alpha-value>)',
+              surface: 'rgb(var(--color-surface-rgb) / <alpha-value>)',
+              border: 'rgb(var(--color-border-rgb) / <alpha-value>)',
+              primary: {
+                DEFAULT: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
+                dark: 'rgb(var(--color-primary-dark-rgb) / <alpha-value>)',
+              },
+              'content-primary': 'rgb(var(--color-content-primary-rgb) / <alpha-value>)',
+              'content-secondary': 'rgb(var(--color-content-secondary-rgb) / <alpha-value>)',
+              'content-muted': 'rgb(var(--color-content-muted-rgb) / <alpha-value>)',
+            }
+          }
+        }
+      };
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "recharts": "https://aistudiocdn.com/recharts@^3.1.2"
+  }
+}
+</script>
+</head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
