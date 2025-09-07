@@ -105,9 +105,9 @@ export const ExchangeParcelModal: React.FC<ExchangeParcelModalProps> = ({ isOpen
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Initiate Exchange for ${originalParcel.orderId}`} size="3xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={`Initiate Exchange for ${originalParcel.orderId}`} size="2xl">
             <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                     {/* Left Column */}
                     <div className="space-y-3">
                         <div className="space-y-3 p-3 bg-background rounded-lg border border-border">

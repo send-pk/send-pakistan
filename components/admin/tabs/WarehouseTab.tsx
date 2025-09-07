@@ -92,27 +92,38 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
 
     useEffect(() => {
         if (!isScannerModalOpen) {
-            if (scannerRef.current) { scannerRef.current.stop().catch(() => {}); }
             return;
         }
 
-        let scanner: any;
+        const scanner = new Html5Qrcode(scanRegionId);
+        scannerRef.current = scanner;
+
         const startScanner = async () => {
             setScanError(null);
-            scanner = new Html5Qrcode(scanRegionId);
-            scannerRef.current = scanner;
             try {
-                await Html5Qrcode.getCameras();
-                await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, () => {});
+                await scanner.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    onScanSuccess,
+                    () => {} // onScanFailure
+                );
             } catch (error) {
-                setScanError("Camera permission denied.");
-                setIsScannerModalOpen(false);
+                console.error("Scanner failed to start:", error);
+                setScanError('Camera permission denied or not available.');
+                handleCloseScannerModal();
             }
         };
 
         startScanner();
-        return () => { if (scannerRef.current && scannerRef.current.isScanning) { scannerRef.current.stop().catch(() => {}); } };
-    }, [isScannerModalOpen, onScanSuccess]);
+
+        return () => {
+            if (scannerRef.current?.isScanning) {
+                scannerRef.current.stop().catch((err: any) => {
+                    console.error("Failed to stop scanner cleanly.", err);
+                });
+            }
+        };
+    }, [isScannerModalOpen, onScanSuccess, handleCloseScannerModal]);
     
     const handleModalClose = () => {
         setScannedParcel(null);

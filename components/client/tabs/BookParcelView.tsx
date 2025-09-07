@@ -68,8 +68,8 @@ export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingS
                 </div>
                 
                 <div>
-                    <FormLabel htmlFor="itemDetails">Item Details</FormLabel>
-                    <FormInput id="itemDetails" name="itemDetails" value={newParcel.itemDetails} onChange={handleInputChange} required placeholder="e.g., 2x Lawn Suit, 1x Perfume" />
+                    <FormLabel htmlFor="itemDetails">Item Details (optional)</FormLabel>
+                    <FormInput id="itemDetails" name="itemDetails" value={newParcel.itemDetails} onChange={handleInputChange} placeholder="e.g., 2x Lawn Suit, 1x Perfume" />
                 </div>
                 
                 <div>

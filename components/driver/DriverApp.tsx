@@ -76,6 +76,11 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [allParcels, user.id]);
 
+    const assignedParcelsRef = useRef(assignedParcels);
+    useEffect(() => {
+        assignedParcelsRef.current = assignedParcels;
+    }, [assignedParcels]);
+
     const parcelsInDateRange = useMemo(() => {
         if (dateFilter === 'all') {
             return assignedParcels;
@@ -188,7 +193,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
     const handleCloseScannerModal = useCallback(() => { setIsScannerOpen(false); setScanError(null); }, []);
     
     const onScanSuccess = useCallback(async (decodedText: string) => {
-        const foundParcel = assignedParcels.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
+        const foundParcel = assignedParcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
 
         if (!foundParcel) {
             setScanError('Scan failed: Parcel not found in your assigned tasks list.');
@@ -218,23 +223,42 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
         } else {
             setScanError(`Scan invalid: Parcel not ready for your action. Current status: "${foundParcel.status}".`);
         }
-    }, [handleCloseScannerModal, user, updateParcelStatus, assignedParcels]);
+    }, [handleCloseScannerModal, user, updateParcelStatus]);
     
-     useEffect(() => {
-        if (!isScannerOpen) { if (scannerRef.current) { scannerRef.current.stop().catch(() => {}); } return; }
-        let scanner: any;
+    useEffect(() => {
+        if (!isScannerOpen) {
+            return;
+        }
+
+        const scanner = new Html5Qrcode(scanRegionId);
+        scannerRef.current = scanner;
+
         const startScanner = async () => {
             setScanError(null);
-            scanner = new Html5Qrcode(scanRegionId);
-            scannerRef.current = scanner;
             try {
-                await Html5Qrcode.getCameras();
-                await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, () => {});
-            } catch (error) { setScanError('Camera permission denied.'); setIsScannerOpen(false); }
+                await scanner.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    onScanSuccess,
+                    () => {}
+                );
+            } catch (error) {
+                console.error("Scanner failed to start:", error);
+                setScanError('Camera permission denied or not available.');
+                handleCloseScannerModal();
+            }
         };
+
         startScanner();
-        return () => { if (scannerRef.current && scannerRef.current.isScanning) { scannerRef.current.stop().catch(() => {}); } };
-    }, [isScannerOpen, onScanSuccess]);
+
+        return () => {
+            if (scannerRef.current?.isScanning) {
+                scannerRef.current.stop().catch((err: any) => {
+                    console.error("Failed to stop scanner cleanly.", err);
+                });
+            }
+        };
+    }, [isScannerOpen, onScanSuccess, handleCloseScannerModal]);
 
     const ParcelCard = ({ parcel }: { parcel: Parcel }) => {
         const isPickupTask = [ParcelStatus.BOOKED, ParcelStatus.OUT_FOR_RETURN].includes(parcel.status);
