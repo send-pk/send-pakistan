@@ -143,7 +143,7 @@ export const ParcelDetailsModal: React.FC<{ isOpen: boolean; onClose: () => void
     )
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Parcel Details: ${parcel.trackingNumber}`} size="4xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={`Parcel Details: ${parcel.trackingNumber}`} size="5xl">
             <div className="p-1">
                 <section>
                     <h3 className="text-md font-semibold mb-2 text-content-primary">Status Timeline</h3>
@@ -152,71 +152,80 @@ export const ParcelDetailsModal: React.FC<{ isOpen: boolean; onClose: () => void
                     </div>
                 </section>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                    <div className="space-y-2">
-                        <DetailSection title="Recipient Information" icon={<UserIcon className="w-5 h-5 text-primary" />}>
-                            <p><strong>Name:</strong> <span className="text-content-primary">{parcel.recipientName}</span></p>
-                            <p><strong>Address:</strong> <span className="text-content-primary">{parcel.recipientAddress}</span></p>
-                            <p><strong>Phone:</strong> <span className="text-content-primary">{parcel.recipientPhone}</span></p>
-                        </DetailSection>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-4 gap-y-2 mt-2">
+                    {/* Details Section */}
+                    <div className="lg:col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="space-y-2">
+                                <DetailSection title="Recipient Information" icon={<UserIcon className="w-5 h-5 text-primary" />}>
+                                    <p><strong>Name:</strong> <span className="text-content-primary">{parcel.recipientName}</span></p>
+                                    <p><strong>Address:</strong> <span className="text-content-primary">{parcel.recipientAddress}</span></p>
+                                    <p><strong>Phone:</strong> <span className="text-content-primary">{parcel.recipientPhone}</span></p>
+                                </DetailSection>
 
-                        <DetailSection title="Driver Information" icon={<TruckIcon className="w-5 h-5 text-primary" />}>
-                            <p><strong>Pickup Driver:</strong> <DriverAssigner parcel={parcel} type="pickup" currentDriver={pickupDriver} isAdmin={!!isAdmin} /></p>
-                            <p><strong>Delivery Driver:</strong> <DriverAssigner parcel={parcel} type="delivery" currentDriver={deliveryDriver} isAdmin={!!isAdmin} /></p>
-                        </DetailSection>
-                    </div>
+                                <DetailSection title="Driver Information" icon={<TruckIcon className="w-5 h-5 text-primary" />}>
+                                    <p><strong>Pickup Driver:</strong> <DriverAssigner parcel={parcel} type="pickup" currentDriver={pickupDriver} isAdmin={!!isAdmin} /></p>
+                                    <p><strong>Delivery Driver:</strong> <DriverAssigner parcel={parcel} type="delivery" currentDriver={deliveryDriver} isAdmin={!!isAdmin} /></p>
+                                </DetailSection>
+                            </div>
 
-                    <div className="space-y-2">
-                         <DetailSection title="Parcel Information" icon={<PackageIcon className="w-5 h-5 text-primary" />}>
-                            <p><strong>Order ID:</strong> <span className="text-content-primary">{parcel.orderId}</span></p>
-                            <p><strong>Delivery Zone:</strong> <span className="text-content-primary font-semibold">{parcel.deliveryZone || 'N/A'}</span></p>
-                             {parcel.isExchange ? (
-                                <p><strong>Type:</strong> <span className="font-semibold text-content-primary inline-flex items-center gap-1.5">Exchange Shipment <ArrowPathIcon className="w-4 h-4 text-purple-500" /></span></p>
-                            ) : parcel.isOpenParcel ? (
-                                <p><strong>Type:</strong> <span className="font-semibold text-orange-500">Open Parcel Delivery</span></p>
-                            ) : null}
-                            {linkedParcel && (
-                                <p><strong>Linked Parcel:</strong> <span className="font-mono text-primary-dark">{linkedParcel.trackingNumber}</span></p>
-                            )}
-                            <p><strong>Brand:</strong> <span className="text-content-primary">{parcel.brandName}</span></p>
-                            <p><strong>Item Details:</strong> <span className="text-content-primary">{parcel.itemDetails}</span></p>
-                            {parcel.returnItemDetails && <p><strong>Return Items:</strong> <span className="text-content-primary font-semibold">{formatReturnItems(parcel.returnItemDetails)}</span></p>}
-                            {parcel.deliveryInstructions && <p><strong>Instructions:</strong> <span className="text-content-primary">{parcel.deliveryInstructions}</span></p>}
-                            {parcel.shipperAdvice && <p><strong>Shipper Advice:</strong> <span className="text-content-primary font-semibold text-yellow-600 dark:text-yellow-400">{parcel.shipperAdvice}</span></p>}
-                            {parcel.brandRemark && <p><strong>Brand Remark:</strong> <span className="text-content-primary font-semibold text-blue-600 dark:text-blue-400">{parcel.brandRemark}</span></p>}
-                        </DetailSection>
-
-                        <DetailSection title="Financials" icon={<DollarSignIcon className="w-5 h-5 text-primary" />}>
-                            <p><strong>COD Amount:</strong> <span className="text-green-600 dark:text-green-400 font-bold">PKR {parcel.codAmount.toFixed(2)}</span></p>
-                            <p><strong>Delivery Charge:</strong> <span className="text-red-600 dark:text-red-400">PKR {parcel.deliveryCharge.toFixed(2)}</span></p>
-                            <p><strong>Tax (16%):</strong> <span className="text-red-600 dark:text-red-400">PKR {parcel.tax.toFixed(2)}</span></p>
-                        </DetailSection>
-                    </div>
-                </div>
-
-                {parcel.history && parcel.history.length > 0 && (
-                    <DetailSection title="History & Remarks" icon={<HistoryIcon className="w-5 h-5 text-primary" />} className="mt-2">
-                        <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
-                            {parcel.history.slice().reverse().map((event, index) => (
-                                <div key={index} className="text-sm p-2 bg-surface rounded-md border border-border">
-                                    <div className="flex justify-between items-start">
-                                        <p className="font-semibold text-content-primary">{event.status}</p>
-                                        <p className="text-xs text-content-muted text-right flex-shrink-0 ml-2">
-                                            {formatPKT(event.createdAt)}
-                                        </p>
-                                    </div>
-                                    {event.notes && <p className="text-content-secondary mt-1 text-xs whitespace-pre-wrap">{event.notes}</p>}
-                                    {event.proofOfAttempt && (
-                                        <a href={event.proofOfAttempt} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block">
-                                            <img src={event.proofOfAttempt} alt="Proof of attempt" className="rounded-md max-h-24 w-auto border border-border hover:opacity-80 transition-opacity" />
-                                        </a>
+                            <div className="space-y-2">
+                                 <DetailSection title="Parcel Information" icon={<PackageIcon className="w-5 h-5 text-primary" />}>
+                                    <p><strong>Order ID:</strong> <span className="text-content-primary">{parcel.orderId}</span></p>
+                                    <p><strong>Delivery Zone:</strong> <span className="text-content-primary font-semibold">{parcel.deliveryZone || 'N/A'}</span></p>
+                                     {parcel.isExchange ? (
+                                        <p><strong>Type:</strong> <span className="font-semibold text-content-primary inline-flex items-center gap-1.5">Exchange Shipment <ArrowPathIcon className="w-4 h-4 text-purple-500" /></span></p>
+                                    ) : parcel.isOpenParcel ? (
+                                        <p><strong>Type:</strong> <span className="font-semibold text-orange-500">Open Parcel Delivery</span></p>
+                                    ) : null}
+                                    {linkedParcel && (
+                                        <p><strong>Linked Parcel:</strong> <span className="font-mono text-primary-dark">{linkedParcel.trackingNumber}</span></p>
                                     )}
-                                    {event.updatedBy && <p className="text-xs text-content-muted mt-1">by: <strong>{event.updatedBy}</strong></p>}
-                                </div>
-                            ))}
+                                    <p><strong>Brand:</strong> <span className="text-content-primary">{parcel.brandName}</span></p>
+                                    <p><strong>Item Details:</strong> <span className="text-content-primary">{parcel.itemDetails}</span></p>
+                                    {parcel.returnItemDetails && <p><strong>Return Items:</strong> <span className="text-content-primary font-semibold">{formatReturnItems(parcel.returnItemDetails)}</span></p>}
+                                    {parcel.deliveryInstructions && <p><strong>Instructions:</strong> <span className="text-content-primary">{parcel.deliveryInstructions}</span></p>}
+                                    {parcel.shipperAdvice && <p><strong>Shipper Advice:</strong> <span className="text-content-primary font-semibold text-yellow-600 dark:text-yellow-400">{parcel.shipperAdvice}</span></p>}
+                                    {parcel.brandRemark && <p><strong>Brand Remark:</strong> <span className="text-content-primary font-semibold text-blue-600 dark:text-blue-400">{parcel.brandRemark}</span></p>}
+                                </DetailSection>
+
+                                <DetailSection title="Financials" icon={<DollarSignIcon className="w-5 h-5 text-primary" />}>
+                                    <p><strong>COD Amount:</strong> <span className="text-green-600 dark:text-green-400 font-bold">PKR {parcel.codAmount.toFixed(2)}</span></p>
+                                    <p><strong>Delivery Charge:</strong> <span className="text-red-600 dark:text-red-400">PKR {parcel.deliveryCharge.toFixed(2)}</span></p>
+                                    <p><strong>Tax (16%):</strong> <span className="text-red-600 dark:text-red-400">PKR {parcel.tax.toFixed(2)}</span></p>
+                                </DetailSection>
+                            </div>
                         </div>
-                    </DetailSection>
-                )}
+                    </div>
+
+                    {/* History Section */}
+                    {parcel.history && parcel.history.length > 0 && (
+                        <section className="lg:col-span-1 flex flex-col">
+                            <h3 className="text-md font-semibold mb-1.5 text-content-primary flex items-center gap-2"><HistoryIcon className="w-5 h-5 text-primary" /> History & Remarks</h3>
+                            <div className="bg-background p-2 rounded-lg text-content-secondary border border-border text-sm flex-grow overflow-y-auto">
+                                <div className="space-y-1 pr-2">
+                                    {parcel.history.slice().reverse().map((event, index) => (
+                                        <div key={index} className="text-sm p-2 bg-surface rounded-md border border-border">
+                                            <div className="flex justify-between items-start">
+                                                <p className="font-semibold text-content-primary">{event.status}</p>
+                                                <p className="text-xs text-content-muted text-right flex-shrink-0 ml-2">
+                                                    {formatPKT(event.createdAt)}
+                                                </p>
+                                            </div>
+                                            {event.notes && <p className="text-content-secondary mt-1 text-xs whitespace-pre-wrap">{event.notes}</p>}
+                                            {event.proofOfAttempt && (
+                                                <a href={event.proofOfAttempt} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block">
+                                                    <img src={event.proofOfAttempt} alt="Proof of attempt" className="rounded-md max-h-24 w-auto border border-border hover:opacity-80 transition-opacity" />
+                                                </a>
+                                            )}
+                                            {event.updatedBy && <p className="text-xs text-content-muted mt-1">by: <strong>{event.updatedBy}</strong></p>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
+                </div>
             </div>
         </Modal>
     );
