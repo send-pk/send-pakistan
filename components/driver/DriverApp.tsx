@@ -67,7 +67,6 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
     const scannerRef = useRef<any>(null);
-    const processingScan = useRef(false);
     const scanRegionId = "driver-scan-region";
     const [showSuccessFeedback, setShowSuccessFeedback] = useState(false);
 
@@ -197,40 +196,33 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
     }, []);
     
     const onScanSuccess = useCallback(async (decodedText: string) => {
-        if (processingScan.current) return;
-        processingScan.current = true;
+        const foundParcel = assignedParcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
 
-        try {
-            const foundParcel = assignedParcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
+        if (!foundParcel) {
+            setScanError('Scan failed: Parcel not found in your assigned tasks list.');
+            return;
+        }
 
-            if (!foundParcel) {
-                setScanError('Scan failed: Parcel not found in your assigned tasks list.');
-                return;
-            }
+        const isMyPickupTask = (foundParcel.status === ParcelStatus.BOOKED || foundParcel.status === ParcelStatus.OUT_FOR_RETURN) && foundParcel.pickupDriverId === user.id;
+        const isMyDeliveryTask = ([ParcelStatus.OUT_FOR_DELIVERY, ParcelStatus.DELIVERY_FAILED].includes(foundParcel.status)) && foundParcel.deliveryDriverId === user.id;
 
-            const isMyPickupTask = (foundParcel.status === ParcelStatus.BOOKED || foundParcel.status === ParcelStatus.OUT_FOR_RETURN) && foundParcel.pickupDriverId === user.id;
-            const isMyDeliveryTask = ([ParcelStatus.OUT_FOR_DELIVERY, ParcelStatus.DELIVERY_FAILED].includes(foundParcel.status)) && foundParcel.deliveryDriverId === user.id;
-
-            if (isMyPickupTask) {
-                handleCloseScannerModal();
-                const nextStatus = foundParcel.status === ParcelStatus.BOOKED ? ParcelStatus.PICKED_UP : ParcelStatus.RETURNED;
-                await updateParcelStatus(foundParcel.id, nextStatus, user);
+        if (isMyPickupTask) {
+            handleCloseScannerModal();
+            const nextStatus = foundParcel.status === ParcelStatus.BOOKED ? ParcelStatus.PICKED_UP : ParcelStatus.RETURNED;
+            await updateParcelStatus(foundParcel.id, nextStatus, user);
+            setShowSuccessFeedback(true);
+        } else if (isMyDeliveryTask) {
+            handleCloseScannerModal();
+            if (foundParcel.isExchange) {
+                await updateParcelStatus(foundParcel.id, ParcelStatus.DELIVERED_EXCHANGE_COMPLETE, user);
                 setShowSuccessFeedback(true);
-            } else if (isMyDeliveryTask) {
-                handleCloseScannerModal();
-                if (foundParcel.isExchange) {
-                    await updateParcelStatus(foundParcel.id, ParcelStatus.DELIVERED_EXCHANGE_COMPLETE, user);
-                    setShowSuccessFeedback(true);
-                } else {
-                    setSelectedParcel(foundParcel);
-                    const nextStatuses = getAvailableStatuses(foundParcel);
-                    setNewStatus(nextStatuses.length > 0 ? nextStatuses[0] : '');
-                }
             } else {
-                setScanError(`Scan invalid: Parcel not ready for your action. Current status: "${foundParcel.status}".`);
+                setSelectedParcel(foundParcel);
+                const nextStatuses = getAvailableStatuses(foundParcel);
+                setNewStatus(nextStatuses.length > 0 ? nextStatuses[0] : '');
             }
-        } finally {
-            processingScan.current = false;
+        } else {
+            setScanError(`Scan invalid: Parcel not ready for your action. Current status: "${foundParcel.status}".`);
         }
     }, [handleCloseScannerModal, user, updateParcelStatus]);
     

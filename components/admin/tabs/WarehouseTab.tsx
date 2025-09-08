@@ -43,7 +43,6 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
     const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
     const scannerRef = useRef<any>(null);
-    const processingScan = useRef(false);
     const scanRegionId = "warehouse-scan-region";
     const [showSuccessFeedback, setShowSuccessFeedback] = useState(false);
 
@@ -73,28 +72,21 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
     }, []);
 
     const onScanSuccess = useCallback((decodedText: string) => {
-        if (processingScan.current) return;
-        processingScan.current = true;
-        
-        try {
-            const foundParcel = parcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
-            if (foundParcel) {
-                const validNextSteps = getValidWarehouseStatuses(foundParcel);
-                if (validNextSteps.length > 0) {
-                    setShowSuccessFeedback(true);
-                    handleCloseScannerModal(); 
-                    setScannedParcel(foundParcel);
-                    setNewStatus(validNextSteps[0]);
-                    setSelectedZone(foundParcel.deliveryZone || '');
-                    setSelectedDriverId(''); // Reset driver selection
-                } else {
-                    setScanError(`Invalid Scan: Parcel status (${foundParcel.status}) cannot be updated at the warehouse.`);
-                }
+        const foundParcel = parcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
+        if (foundParcel) {
+            const validNextSteps = getValidWarehouseStatuses(foundParcel);
+            if (validNextSteps.length > 0) {
+                setShowSuccessFeedback(true);
+                handleCloseScannerModal(); 
+                setScannedParcel(foundParcel);
+                setNewStatus(validNextSteps[0]);
+                setSelectedZone(foundParcel.deliveryZone || '');
+                setSelectedDriverId(''); // Reset driver selection
             } else {
-                setScanError("Parcel not found in the system.");
+                setScanError(`Invalid Scan: Parcel status (${foundParcel.status}) cannot be updated at the warehouse.`);
             }
-        } finally {
-            processingScan.current = false;
+        } else {
+            setScanError("Parcel not found in the system.");
         }
     }, [handleCloseScannerModal]);
 
