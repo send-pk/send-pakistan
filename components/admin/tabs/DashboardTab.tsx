@@ -206,8 +206,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ parcels, allParcels,
     };
 
     return (
-        <div className="space-y-6">
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="space-y-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                  <StatCard 
                     title="Total Parcels" 
                     value={stats.total} 
@@ -241,7 +241,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ parcels, allParcels,
                     isActive={filterStatus === 'shipperRemarked'}
                 />
             </div>
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
                 <div className="xl:col-span-1">
                     <ParcelsByStatus 
                         parcels={allParcels} 
@@ -251,8 +251,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ parcels, allParcels,
                 </div>
                 <div className="xl:col-span-2">
                     <Card>
-                        <h2 className="text-2xl font-bold mb-4 text-content-primary">All Parcels</h2>
-                        <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
+                        <h2 className="text-lg font-bold mb-3 text-content-primary">All Parcels</h2>
+                        <div className="flex flex-col sm:flex-row items-center gap-2 mb-3">
                             <div className="relative flex-grow w-full">
                                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-content-muted" />
                                 <input placeholder="Search by Tracking #, Order ID, Name, Brand..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors" />
@@ -269,13 +269,13 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ parcels, allParcels,
                             <table className="w-full text-left text-sm">
                                 <thead className="border-b border-border bg-surface/50 text-content-secondary">
                                     <tr>
-                                        <th className="p-4 w-12"><Checkbox checked={allVisibleSelected} onChange={handleSelectAllVisible} aria-label="Select all visible parcels"/></th>
-                                        <th className="p-4 font-semibold">Tracking #</th>
-                                        <th className="p-4 font-semibold">Brand</th>
-                                        <th className="p-4 font-semibold">Recipient</th>
-                                        <th className="p-4 font-semibold">Assigned Driver</th>
-                                        <th className="p-4 font-semibold">Status</th>
-                                        <th className="p-4 font-semibold text-right">COD</th>
+                                        <th className="p-2 w-12"><Checkbox checked={allVisibleSelected} onChange={handleSelectAllVisible} aria-label="Select all visible parcels"/></th>
+                                        <th className="p-2 font-semibold">Tracking #</th>
+                                        <th className="p-2 font-semibold">Brand</th>
+                                        <th className="p-2 font-semibold">Recipient</th>
+                                        <th className="p-2 font-semibold">Assigned Driver</th>
+                                        <th className="p-2 font-semibold">Status</th>
+                                        <th className="p-2 font-semibold text-right">COD</th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-content-primary">
@@ -285,20 +285,20 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ parcels, allParcels,
                                         const Icon = info?.icon;
                                         return (
                                         <tr key={p.id} onClick={() => setViewingParcel(p)} className={`border-b border-border last:border-b-0 hover:bg-surface cursor-pointer ${selectedParcels.has(p.id) ? 'bg-primary/10' : ''}`}>
-                                            <td className="p-4 w-12" onClick={e => e.stopPropagation()}><Checkbox checked={selectedParcels.has(p.id)} onChange={() => handleSelectParcel(p.id)} aria-label={`Select parcel ${p.trackingNumber}`}/></td>
-                                            <td className="p-4 text-primary font-medium">{p.trackingNumber}</td>
-                                            <td className="p-4">{p.brandName}</td>
-                                            <td className="p-4">{p.recipientName}</td>
-                                            <td className="p-4">{driverName}</td>
-                                            <td className="p-4">
+                                            <td className="p-2 w-12" onClick={e => e.stopPropagation()}><Checkbox checked={selectedParcels.has(p.id)} onChange={() => handleSelectParcel(p.id)} aria-label={`Select parcel ${p.trackingNumber}`}/></td>
+                                            <td className="p-2 text-primary font-medium">{p.trackingNumber}</td>
+                                            <td className="p-2">{p.brandName}</td>
+                                            <td className="p-2">{p.recipientName}</td>
+                                            <td className="p-2">{driverName}</td>
+                                            <td className="p-2">
                                                 {info && Icon ? (
-                                                    <span className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold rounded-full ${info.colorClasses}`}>
+                                                    <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 text-xs font-semibold rounded-full ${info.colorClasses}`}>
                                                         <Icon className="w-3 h-3" />
                                                         {p.status}
                                                     </span>
                                                 ) : p.status}
                                             </td>
-                                            <td className="p-4 text-right font-semibold">PKR {p.codAmount.toLocaleString()}</td>
+                                            <td className="p-2 text-right font-semibold">PKR {p.codAmount.toLocaleString()}</td>
                                         </tr>
                                     )})}
                                 </tbody>

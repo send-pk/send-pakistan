@@ -268,10 +268,10 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
         const brand = useMemo(() => users.find(u => u.id === parcel.brandId), [users, parcel.brandId]);
         const correspondentPhone = brand?.correspondentPhone;
 
-        const callButtonClasses = 'w-full rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface transition-all duration-200 px-4 py-2 text-sm bg-surface border border-border text-content-secondary hover:bg-border focus:ring-primary inline-flex items-center justify-center gap-2';
+        const callButtonClasses = 'w-full rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface transition-all duration-200 px-3 py-1 text-sm bg-surface border border-border text-content-secondary hover:bg-border focus:ring-primary inline-flex items-center justify-center gap-2';
 
         return (
-            <Card key={parcel.id} className="p-4 space-y-3">
+            <Card key={parcel.id} className="p-2 space-y-1.5">
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
@@ -285,9 +285,9 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
 
                 {/* Details */}
                 <div className="flex items-start gap-3 text-sm">
-                    <UserIcon className="w-5 h-5 mt-1 text-content-muted flex-shrink-0" />
+                    <UserIcon className="w-4 h-4 mt-0.5 text-content-muted flex-shrink-0" />
                     <div>
-                        <p className="font-bold text-lg text-content-primary">
+                        <p className="font-bold text-sm text-content-primary">
                             {parcel.status === ParcelStatus.OUT_FOR_RETURN ? `Return to: ${parcel.brandName}` : (isPickupTask ? parcel.brandName : parcel.recipientName)}
                         </p>
                         <p className="text-content-secondary">{parcel.recipientAddress}</p>
@@ -299,20 +299,20 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
                 {isDeliveryTask && (
                     <>
                         <hr className="border-border"/>
-                        <div className="bg-green-50 dark:bg-green-500/10 p-3 rounded-lg flex justify-between items-center">
+                        <div className="bg-green-50 dark:bg-green-500/10 p-2.5 rounded-lg flex justify-between items-center">
                             <p className="text-sm font-semibold text-green-800 dark:text-green-200">COD to Collect</p>
-                            <p className="font-bold text-2xl text-green-600 dark:text-green-400">PKR {parcel.codAmount.toLocaleString()}</p>
+                            <p className="font-bold text-lg text-green-600 dark:text-green-400">PKR {parcel.codAmount.toLocaleString()}</p>
                         </div>
                     </>
                 )}
 
                 {/* Instructions/Warnings */}
                 {(parcel.isOpenParcel || parcel.isExchange || parcel.shipperAdvice || parcel.brandRemark) && <hr className="border-border"/>}
-                <div className="space-y-2">
-                    {parcel.isOpenParcel && (<div className="p-2 bg-orange-100 dark:bg-orange-500/20 rounded-md text-sm text-orange-800 dark:text-orange-300 flex items-center gap-2"><EyeIcon className="w-5 h-5 flex-shrink-0" /><div><strong>OPEN PARCEL:</strong> Allow customer to check contents before payment.</div></div>)}
-                    {parcel.isExchange && (<div className="p-2 bg-purple-100 dark:bg-purple-500/20 rounded-md text-sm text-purple-800 dark:text-purple-300 flex items-center gap-2"><ArrowPathIcon className="w-5 h-5 flex-shrink-0" /><div><strong>EXCHANGE:</strong> Pick up "{formatReturnItems(linkedParcel?.returnItemDetails)}" from customer.</div></div>)}
-                    {parcel.shipperAdvice && (<div className="p-2 bg-yellow-100 dark:bg-yellow-500/20 rounded-md text-sm text-yellow-800 dark:text-yellow-300"><strong>Shipper Advice:</strong> {parcel.shipperAdvice}</div>)}
-                    {parcel.brandRemark && (<div className="p-2 bg-blue-100 dark:bg-blue-500/20 rounded-md text-sm text-blue-800 dark:text-blue-300"><strong>Brand Remark:</strong> {parcel.brandRemark}</div>)}
+                <div className="space-y-1.5">
+                    {parcel.isOpenParcel && (<div className="p-1.5 bg-orange-100 dark:bg-orange-500/20 rounded-md text-xs text-orange-800 dark:text-orange-300 flex items-center gap-2"><EyeIcon className="w-4 h-4 flex-shrink-0" /><div><strong>OPEN PARCEL:</strong> Allow customer to check contents before payment.</div></div>)}
+                    {parcel.isExchange && (<div className="p-1.5 bg-purple-100 dark:bg-purple-500/20 rounded-md text-xs text-purple-800 dark:text-purple-300 flex items-center gap-2"><ArrowPathIcon className="w-4 h-4 flex-shrink-0" /><div><strong>EXCHANGE:</strong> Pick up "{formatReturnItems(linkedParcel?.returnItemDetails)}" from customer.</div></div>)}
+                    {parcel.shipperAdvice && (<div className="p-1.5 bg-yellow-100 dark:bg-yellow-500/20 rounded-md text-xs text-yellow-800 dark:text-yellow-300"><strong>Shipper Advice:</strong> {parcel.shipperAdvice}</div>)}
+                    {parcel.brandRemark && (<div className="p-1.5 bg-blue-100 dark:bg-blue-500/20 rounded-md text-xs text-blue-800 dark:text-blue-300"><strong>Brand Remark:</strong> {parcel.brandRemark}</div>)}
                 </div>
 
                 {/* Actions */}
@@ -333,9 +333,9 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
     return (
         <div className="max-w-md mx-auto h-screen flex flex-col bg-background">
             <ScanSuccessFeedback show={showSuccessFeedback} onEnd={() => setShowSuccessFeedback(false)} />
-            <header className="bg-surface px-4 py-3 flex justify-between items-center z-20 border-b border-border sticky top-0">
-                <div className="flex items-center gap-3">
-                    <Logo textClassName="text-xl" iconClassName="w-5 h-5" />
+            <header className="bg-surface px-4 py-2 flex justify-between items-center z-20 border-b border-border sticky top-0">
+                <div className="flex items-center gap-2">
+                    <Logo textClassName="text-lg" iconClassName="w-5 h-5" />
                     <span className="text-content-muted">/</span>
                     <span className="font-semibold text-content-primary">{user.name}</span>
                 </div>
@@ -346,17 +346,17 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
                 </div>
             </header>
             
-            <div className="px-4 py-3 sticky top-[61px] z-10 bg-background space-y-3 border-b border-border shadow-sm">
+            <div className="px-3 py-2 sticky top-[53px] z-10 bg-background space-y-2 border-b border-border shadow-sm">
                 <div className="relative">
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-content-muted" />
-                    <input type="text" placeholder="Search by name, address, tracking..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-surface border border-border rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition" />
+                    <input type="text" placeholder="Search by name, address, tracking..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-surface border border-border rounded-lg pl-10 pr-4 py-1.5 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition" />
                 </div>
                 <DateFilter dateFilter={dateFilter} setDateFilter={setDateFilter} customStartDate={customStartDate} setCustomStartDate={setCustomStartDate} customEndDate={customEndDate} setCustomEndDate={setCustomEndDate} />
             </div>
 
             <main className="flex-1 overflow-y-auto">
                 <div className="px-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 my-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 my-2">
                         <StatCard title="To Pick" value={stats.toPick} icon={PackageIcon} onClick={() => setActiveFilter('toPick')} isActive={activeFilter === 'toPick'} colorClass="text-yellow-500" />
                         <StatCard title="Picked Up" value={stats.pickedUp} icon={TruckIcon} onClick={() => setActiveFilter('pickedUp')} isActive={activeFilter === 'pickedUp'} colorClass="text-blue-500" />
                         <StatCard title="Out for Delivery" value={stats.outForDelivery} icon={MapPinIcon} onClick={() => setActiveFilter('outForDelivery')} isActive={activeFilter === 'outForDelivery'} colorClass="text-cyan-500" />
@@ -383,7 +383,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
                         <div><FormLabel htmlFor="newStatus">New Status</FormLabel><FormSelect id="newStatus" value={newStatus} onChange={e => setNewStatus(e.target.value as ParcelStatus)}>{getAvailableStatuses(selectedParcel).map(s => <option key={s} value={s}>{s}</option>)}</FormSelect></div>
                         {newStatus === ParcelStatus.DELIVERY_FAILED && (<>
                             <div><FormLabel htmlFor="failedAttemptReason">Reason for Failure</FormLabel><FormSelect id="failedAttemptReason" value={failedAttemptReason} onChange={e => setFailedAttemptReason(e.target.value)} required><option value="">Select a reason</option>{FAILED_ATTEMPT_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}</FormSelect></div>
-                            <div><FormLabel>Proof of Attempt (Photo)</FormLabel><Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-2"><CameraIcon className="w-5 h-5"/> {imagePreview ? "Change Photo" : "Take Photo"}</Button><input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleFileChange} className="hidden" required/>{imagePreview && <img src={imagePreview} alt="Proof of attempt" className="mt-4 rounded-lg max-h-48 w-auto mx-auto"/>}</div>
+                            <div><FormLabel>Proof of Attempt (Photo)</FormLabel><Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-2"><CameraIcon className="w-5 h-5"/> {imagePreview ? "Change Photo" : "Take Photo"}</Button><input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleFileChange} className="hidden" required/>{imagePreview && <img src={imagePreview} alt="Proof of attempt" className="mt-4 rounded-lg max-h-40 w-auto mx-auto"/>}</div>
                         </>)}
                         <div className="flex justify-end gap-2 pt-3"><Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button><Button type="submit">Confirm Update</Button></div>
                     </form>
@@ -391,7 +391,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
             </Modal>
             
             <Modal isOpen={isScannerOpen} onClose={handleCloseScannerModal} title="Scan Parcel Barcode">
-                <div id={scanRegionId} className="w-full border border-dashed border-border rounded-lg bg-surface min-h-[250px] flex items-center justify-center text-content-muted">Camera will appear here</div>
+                <div id={scanRegionId} className="w-full border border-dashed border-border rounded-lg bg-surface min-h-[200px] flex items-center justify-center text-content-muted">Camera will appear here</div>
                 {scanError && <div className="mt-4 p-3 rounded-md text-sm text-center bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300">{scanError}</div>}
                 <div className="mt-4 flex justify-end"><Button variant="secondary" onClick={handleCloseScannerModal}>Cancel</Button></div>
             </Modal>

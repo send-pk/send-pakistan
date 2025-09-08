@@ -35,8 +35,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     const drivers = users.filter(u => u.role === UserRole.DRIVER);
 
     return (
-        <div className="min-h-screen bg-background text-content-primary">
-            <header className="py-4 px-4 sm:px-6 md:px-12 flex justify-between items-center border-b border-border">
+        <div className="min-h-screen bg-background text-content-primary flex flex-col">
+            <header className="py-4 px-4 sm:px-6 md:px-12 flex justify-between items-center border-b border-border shadow-sm sticky top-0 bg-background/80 backdrop-blur-sm z-50">
                 <Logo />
                 <div className="flex items-center gap-4">
                     <Button onClick={() => setIsLoginModalOpen(true)} variant="secondary" className="flex items-center gap-2">
@@ -47,37 +47,46 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 </div>
             </header>
 
-            <main className="py-12 px-4 sm:px-6">
-                <section className="text-center py-16 px-4 sm:px-6">
-                     <h1 className="text-4xl md:text-5xl font-bold mb-4 text-content-primary">
-                        Lahore's Fastest Courier Service
-                     </h1>
-                     <p className="max-w-2xl mx-auto text-lg text-content-secondary mb-8">
-                        Just want to track a shipment? Enter your tracking number below.
-                    </p>
-                    <Card className="max-w-2xl mx-auto p-6 text-left shadow-lg">
-                        <form onSubmit={handleTrack}>
-                            <div className="flex flex-col sm:flex-row gap-2">
-                                <input
-                                    id="tracking"
-                                    type="text"
-                                    value={trackingNumber}
-                                    onChange={e => { setTrackingNumber(e.target.value); setError(''); }}
-                                    placeholder="Enter your tracking number (e.g., SD1001)"
-                                    className="flex-grow w-full bg-surface border-2 border-border rounded-lg px-4 py-3 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-                                />
-                                <Button type="submit" size="lg" className="w-full sm:w-auto flex items-center justify-center gap-2">
-                                    <SearchIcon className="w-5 h-5" />
-                                    Track
-                                </Button>
-                            </div>
-                            {error && <p className="text-red-500 mt-4 text-center text-sm">{error}</p>}
-                        </form>
-                    </Card>
+            <main className="flex-1 flex flex-col justify-center main-bg">
+                <section className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                        <div className="text-center md:text-left">
+                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 text-content-primary leading-tight">
+                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-cyan-400">
+                                    Lahore's Own
+                                </span>
+                                <br />
+                                Courier Service
+                             </h1>
+                             <p className="max-w-md mx-auto md:mx-0 text-lg text-content-secondary mb-8">
+                                Just want to track a shipment? Enter your tracking number to see its current status.
+                            </p>
+                        </div>
+                        
+                        <Card className="p-4 sm:p-6 text-left shadow-2xl border-border/50">
+                            <form onSubmit={handleTrack}>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <input
+                                        id="tracking"
+                                        type="text"
+                                        value={trackingNumber}
+                                        onChange={e => { setTrackingNumber(e.target.value); setError(''); }}
+                                        placeholder="Enter tracking number (e.g., SD1001)"
+                                        className="flex-grow w-full bg-surface border-2 border-border rounded-lg px-4 py-2.5 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                                    />
+                                    <Button type="submit" size="lg" className="w-full sm:w-auto flex items-center justify-center gap-2">
+                                        <SearchIcon className="w-5 h-5" />
+                                        Track
+                                    </Button>
+                                </div>
+                                {error && <p className="text-red-500 mt-4 text-center text-sm">{error}</p>}
+                            </form>
+                        </Card>
+                    </div>
                 </section>
             </main>
 
-            <footer className="text-center py-12 px-4 sm:px-6 bg-surface">
+            <footer className="text-center py-8 px-4 sm:px-6 bg-surface border-t border-border">
                 <div className="mb-4">
                     <p className="font-semibold text-content-primary">Open a Business Account with SEND</p>
                     <p className="text-content-secondary mt-1">
@@ -90,9 +99,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             </footer>
             
             <Modal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} title="Select a Portal to Login" size="lg">
-                <div className="space-y-6 p-2">
+                <div className="space-y-3 p-1">
                     <div>
-                        <h3 className="font-bold text-lg mb-2 text-content-primary">Admin / Warehouse</h3>
+                        <h3 className="font-bold text-base mb-2 text-content-primary">Admin / Warehouse</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {admins.map(user => (
                                 <Button key={user.id} variant="secondary" size="lg" className="w-full justify-start" onClick={() => onLogin(user)}>
@@ -102,7 +111,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                         </div>
                     </div>
                     <div>
-                        <h3 className="font-bold text-lg mb-2 text-content-primary">Brands</h3>
+                        <h3 className="font-bold text-base mb-2 text-content-primary">Brands</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {brands.map(user => (
                                 <Button key={user.id} variant="secondary" size="lg" className="w-full justify-start" onClick={() => onLogin(user)}>
@@ -112,7 +121,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                         </div>
                     </div>
                     <div>
-                        <h3 className="font-bold text-lg mb-2 text-content-primary">Drivers</h3>
+                        <h3 className="font-bold text-base mb-2 text-content-primary">Drivers</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {drivers.map(user => (
                                 <Button key={user.id} variant="secondary" size="lg" className="w-full justify-start" onClick={() => onLogin(user)}>

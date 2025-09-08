@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { User, UserRole, Parcel, ParcelStatus } from '../../types';
 import { useData } from '../../context/DataContext';
@@ -104,7 +102,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
     return (
         <div className="flex flex-col h-screen bg-background">
-            <header className="bg-surface px-4 md:px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-2 z-10 border-b border-border sticky top-0">
+            <header className="bg-surface px-4 md:px-6 py-2 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-2 z-10 border-b border-border sticky top-0">
                 <div className="flex items-center gap-3">
                     <Logo textClassName="text-2xl" iconClassName="w-5 h-5" />
                     <span className="text-content-muted">/</span>
@@ -126,8 +124,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 </div>
             </header>
             
-            <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-background">
-                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+            <main className="flex-1 p-4 overflow-y-auto bg-background">
+                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4">
                     {user.role === UserRole.ADMIN && (
                         <nav className="flex flex-nowrap gap-2 p-1 bg-surface rounded-lg border border-border overflow-x-auto w-full lg:w-auto">
                             <NavButton tabName="dashboard">Dashboard</NavButton>
@@ -150,7 +148,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                         </div>
                      )}
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-4">
                     {activeTab === 'dashboard' && user.role === UserRole.ADMIN && <DashboardTab parcels={parcels} allParcels={allParcels} users={users} user={user} />}
                     {activeTab === 'warehouse' && <WarehouseTab user={user} />}
                     {activeTab === 'finance' && user.role === UserRole.ADMIN && <FinanceTab parcelsForDateRange={parcels} allParcels={allParcels} users={users}/>}

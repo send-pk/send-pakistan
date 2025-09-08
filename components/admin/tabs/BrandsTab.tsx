@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../../../context/DataContext';
 import { User, UserRole } from '../../../types';
@@ -76,18 +74,18 @@ export const BrandsTab: React.FC = () => {
         <>
             <Card>
                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-content-primary">Manage Brands</h2>
+                    <h2 className="text-lg font-bold text-content-primary">Manage Brands</h2>
                     <Button onClick={() => setIsBrandModalOpen(true)} className="flex items-center gap-2"><PlusIcon className="w-4 h-4" /> Add Brand</Button>
                  </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead className="border-b border-border bg-surface/50 text-content-secondary">
                             <tr>
-                                <th className="p-4 font-semibold">Name</th>
-                                <th className="p-4 font-semibold">Pickup Driver</th>
-                                <th className="p-4 font-semibold">Bank Name</th>
-                                <th className="p-4 font-semibold">Account #</th>
-                                <th className="p-4 font-semibold">Actions</th>
+                                <th className="p-2 font-semibold">Name</th>
+                                <th className="p-2 font-semibold">Pickup Driver</th>
+                                <th className="p-2 font-semibold">Bank Name</th>
+                                <th className="p-2 font-semibold">Account #</th>
+                                <th className="p-2 font-semibold">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="text-content-primary">
@@ -95,14 +93,14 @@ export const BrandsTab: React.FC = () => {
                                 const assignedDriver = users.find(d => d.id === b.assignedPickupDriverId); // Find from all users to show name even if inactive
                                 return (
                                 <tr key={b.id} className={`border-b border-border last:border-b-0 ${b.status === 'INACTIVE' ? 'opacity-50 bg-red-50 dark:bg-red-900/10' : ''}`}>
-                                    <td className="p-4 font-semibold">
+                                    <td className="p-2 font-semibold">
                                         {b.name}
                                         {b.status === 'INACTIVE' && <span className="ml-2 text-xs font-bold text-red-500">(Inactive)</span>}
                                     </td>
-                                    <td className="p-4">{assignedDriver?.name || <span className="text-content-muted">Unassigned</span>}</td>
-                                    <td className="p-4">{b.bankName || 'N/A'}</td>
-                                    <td className="p-4">{b.accountNumber || 'N/A'}</td>
-                                    <td className="p-4">
+                                    <td className="p-2">{assignedDriver?.name || <span className="text-content-muted">Unassigned</span>}</td>
+                                    <td className="p-2">{b.bankName || 'N/A'}</td>
+                                    <td className="p-2">{b.accountNumber || 'N/A'}</td>
+                                    <td className="p-2">
                                         <Button size="sm" variant="secondary" onClick={() => { setEditingBrand(b); setIsBrandModalOpen(true); }} aria-label={`Edit brand ${b.name}`}><EditIcon className="w-4 h-4" /></Button>
                                     </td>
                                 </tr>
@@ -132,7 +130,7 @@ export const BrandsTab: React.FC = () => {
                             <div className="md:col-span-2"><FormLabel htmlFor="accountNumber">Account Number</FormLabel><FormInput id="accountNumber" name="accountNumber" value={brandFormData.accountNumber} onChange={handleBrandFormInputChange} /></div>
                         </div>
                     </div>
-                    <div className="flex justify-between items-center pt-4 mt-4 border-t border-border">
+                    <div className="flex justify-between items-center pt-3 mt-3 border-t border-border">
                         <div>
                             {editingBrand && (
                                 <Button type="button" variant={editingBrand.status === 'ACTIVE' ? 'danger' : 'primary'} onClick={handleToggleStatus}>

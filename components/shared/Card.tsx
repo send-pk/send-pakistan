@@ -12,7 +12,7 @@ const CardComponent: React.FC<CardProps> = ({ children, className = '', onClick 
 
   return (
     <div 
-      className={`bg-surface rounded-lg p-4 sm:p-6 border border-border shadow ${interactiveClasses} ${className}`} 
+      className={`bg-surface rounded-lg p-4 border border-border shadow ${interactiveClasses} ${className}`} 
       onClick={onClick}
     >
       {children}

@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, Parcel, ParcelStatus, Invoice } from '../../types';
 import { useData } from '../../context/DataContext';
@@ -98,7 +96,7 @@ const BrandDashboard: React.FC<BrandDashboardProps> = ({ user, onLogout }) => {
     
     return (
         <div className="flex flex-col h-screen bg-background">
-            <header className="bg-surface px-4 md:px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-2 z-10 border-b border-border sticky top-0">
+            <header className="bg-surface px-4 md:px-6 py-2 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-2 z-10 border-b border-border sticky top-0">
                  <div className="flex items-center gap-3"> <Logo textClassName="text-2xl" iconClassName="w-5 h-5" /> <span className="text-content-muted">/</span> <span className="font-semibold text-content-primary">Brand Portal</span> </div>
                  <div className="flex items-center flex-wrap justify-center md:justify-end gap-2">
                     <Button variant="secondary" onClick={() => setIsTrackingModalOpen(true)} className="flex items-center gap-2" aria-label="Track Parcel">
@@ -113,8 +111,8 @@ const BrandDashboard: React.FC<BrandDashboardProps> = ({ user, onLogout }) => {
                     </Button>
                 </div>
             </header>
-            <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-background">
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+            <main className="flex-1 p-4 overflow-y-auto bg-background">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4">
                     <nav className="flex flex-nowrap gap-2 p-1 bg-surface rounded-lg border border-border overflow-x-auto w-full lg:w-auto">
                         <NavButton tabName="dashboard">Dashboard</NavButton>
                         <NavButton tabName="book">Book a Parcel</NavButton>

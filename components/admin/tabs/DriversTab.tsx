@@ -66,13 +66,13 @@ const ReassignJobsModal: React.FC<{
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Reassign Jobs from ${fromDriver.name}`} size="lg">
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {/* Pickup Section */}
-                <div className="p-4 bg-background rounded-lg border border-border">
+                <div className="p-3 bg-background rounded-lg border border-border">
                     <h3 className="font-semibold text-content-primary">
                         Reassign Pickup Jobs ({pickupJobsCount})
                     </h3>
-                    <p className="text-sm text-content-secondary mb-3">
+                    <p className="text-sm text-content-secondary mb-2">
                         Reassigns parcels waiting for pickup or return to brand.
                     </p>
                     {pickupJobsCount > 0 ? (
@@ -90,11 +90,11 @@ const ReassignJobsModal: React.FC<{
                 </div>
 
                 {/* Delivery Section */}
-                <div className="p-4 bg-background rounded-lg border border-border">
+                <div className="p-3 bg-background rounded-lg border border-border">
                     <h3 className="font-semibold text-content-primary">
                         Reassign Delivery Jobs ({deliveryJobsCount})
                     </h3>
-                    <p className="text-sm text-content-secondary mb-3">
+                    <p className="text-sm text-content-secondary mb-2">
                         Reassigns parcels currently out for delivery.
                     </p>
                     {deliveryJobsCount > 0 ? (
@@ -230,13 +230,13 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <Card>
                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-content-primary">Driver Performance</h2>
+                    <h2 className="text-lg font-bold text-content-primary">Driver Performance</h2>
                     <Button onClick={() => setIsDriverModalOpen(true)} className="flex items-center gap-2"><PlusIcon className="w-4 h-4" /> Add Driver</Button>
                  </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                     {drivers.map(driver => {
                         const jobs = parcels.filter(p => p.pickupDriverId === driver.id || p.deliveryDriverId === driver.id);
                         
@@ -254,18 +254,18 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                         const successRate = totalJobsForRate > 0 ? Math.round((successfulJobs / totalJobsForRate) * 100) : 100;
 
                         return (
-                            <Card key={driver.id} className={`p-4 flex flex-col bg-surface shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${driver.status === 'INACTIVE' ? 'opacity-50 hover:shadow-md hover:-translate-y-0' : ''}`}>
+                            <Card key={driver.id} className={`p-3 flex flex-col bg-surface shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${driver.status === 'INACTIVE' ? 'opacity-50 hover:shadow-md hover:-translate-y-0' : ''}`}>
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-start gap-3">
                                         {driver.photoUrl ? (
-                                            <img src={driver.photoUrl} alt={driver.name} className="w-16 h-16 rounded-full object-cover border-2 border-border" />
+                                            <img src={driver.photoUrl} alt={driver.name} className="w-12 h-12 rounded-full object-cover border-2 border-border" />
                                         ) : (
-                                            <div className="w-16 h-16 rounded-full bg-background flex-shrink-0 flex items-center justify-center border-2 border-border">
-                                                <UserIcon className="w-8 h-8 text-content-muted" />
+                                            <div className="w-12 h-12 rounded-full bg-background flex-shrink-0 flex items-center justify-center border-2 border-border">
+                                                <UserIcon className="w-6 h-6 text-content-muted" />
                                             </div>
                                         )}
                                         <div>
-                                            <h3 className="font-bold text-lg text-content-primary">{driver.name}</h3>
+                                            <h3 className="font-bold text-base text-content-primary">{driver.name}</h3>
                                             <p className="text-sm text-content-muted">{driver.deliveryZones?.join(', ') || 'No Zones'}</p>
                                             {driver.status === 'INACTIVE' && <span className="text-xs font-bold text-red-500">(Inactive)</span>}
                                         </div>
@@ -278,26 +278,26 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                                     </div>
                                 </div>
                                 
-                                <div className="mt-4 pt-4 border-t border-border flex-grow flex flex-col justify-between">
-                                     <div className="flex justify-between text-sm font-bold mb-3 pb-2 border-b border-dashed border-border">
+                                <div className="mt-3 pt-3 border-t border-border flex-grow flex flex-col justify-between">
+                                     <div className="flex justify-between text-sm font-bold mb-2 pb-1.5 border-b border-dashed border-border">
                                         <span className="text-content-secondary">Success Rate</span>
                                         <span className="text-green-600 dark:text-green-400">{successRate}%</span>
                                     </div>
-                                    <div className="flex justify-between text-sm mt-2">
+                                    <div className="flex justify-between text-sm mt-1.5">
                                         <span className="text-content-secondary">Pending Pickups</span>
                                         <span className="font-semibold text-orange-500">{pendingPickups}</span>
                                     </div>
-                                    <div className="flex justify-between text-sm mt-2">
+                                    <div className="flex justify-between text-sm mt-1.5">
                                         <span className="text-content-secondary">Pending Deliveries</span>
                                         <span className="font-semibold text-blue-500">{pendingDeliveries}</span>
                                     </div>
-                                     <div className="flex justify-between text-sm mt-2">
+                                     <div className="flex justify-between text-sm mt-1.5">
                                         <span className="text-content-secondary">Completed Today</span>
                                         <span className="font-semibold text-green-600">{completedToday}</span>
                                     </div>
                                 </div>
 
-                                <div className="mt-4 pt-4 border-t border-border">
+                                <div className="mt-3 pt-3 border-t border-border">
                                     <div className="flex justify-between items-center">
                                         <span className="font-semibold text-content-primary">On Duty</span>
                                         <ToggleSwitch 
@@ -316,9 +316,9 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
             <Modal isOpen={isDriverModalOpen} onClose={handleModalClose} title={editingDriver ? 'Edit Driver' : 'Add New Driver'} size="5xl">
                 <form onSubmit={handleDriverFormSubmit}>
                     <div className="max-h-[70vh] overflow-y-auto p-1 pr-2">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2 space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                            <div className="lg:col-span-2 space-y-2">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <div className="md:col-span-1 flex flex-col items-center gap-2 pt-2">
                                         <FormLabel>Driver Photo</FormLabel>
                                         {imagePreview ? (
@@ -333,8 +333,8 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                                             {imagePreview ? "Change Photo" : "Upload Photo"}
                                         </Button>
                                     </div>
-                                    <div className="md:col-span-2 space-y-3">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="md:col-span-2 space-y-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             <div><FormLabel htmlFor="d_name">Driver Name</FormLabel><FormInput id="d_name" name="name" value={driverFormData.name} onChange={handleDriverFormInputChange} required /></div>
                                             <div><FormLabel htmlFor="d_phone">Phone Number</FormLabel><FormInput id="d_phone" name="phone" value={driverFormData.phone} onChange={handleDriverFormInputChange} /></div>
                                             <div><FormLabel htmlFor="d_whatsapp">WhatsApp Number</FormLabel><FormInput id="d_whatsapp" name="whatsappNumber" value={driverFormData.whatsappNumber || ''} onChange={handleDriverFormInputChange} /></div>
@@ -343,7 +343,7 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                                         <div><FormLabel htmlFor="d_guardian">Guardian Contact</FormLabel><FormInput id="d_guardian" name="guardianContact" value={driverFormData.guardianContact || ''} onChange={handleDriverFormInputChange} /></div>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div><FormLabel htmlFor="d_current_address">Current Address</FormLabel><FormTextarea id="d_current_address" name="currentAddress" value={driverFormData.currentAddress || ''} onChange={handleDriverFormInputChange} rows={2} /></div>
                                     <div><FormLabel htmlFor="d_permanent_address">Permanent Address</FormLabel><FormTextarea id="d_permanent_address" name="permanentAddress" value={driverFormData.permanentAddress || ''} onChange={handleDriverFormInputChange} rows={2} /></div>
                                 </div>
@@ -365,7 +365,7 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                                     <ListBulletIcon className="w-5 h-5" />
                                     Duty Log
                                 </h3>
-                                <div className="space-y-2 p-2 bg-background rounded-lg border border-border h-96 overflow-y-auto">
+                                <div className="space-y-2 p-2 bg-background rounded-lg border border-border h-80 overflow-y-auto">
                                     {(editingDriver?.dutyLog || []).slice().reverse().map((log, index) => (
                                         <div key={index} className={`p-2 rounded-md text-sm flex justify-between items-center ${log.status === 'ON_DUTY' ? 'bg-green-100 dark:bg-green-500/20' : 'bg-red-100 dark:bg-red-500/20'}`}>
                                             <span className={`font-semibold ${log.status === 'ON_DUTY' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
@@ -382,7 +382,7 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-center pt-4 mt-4 border-t border-border">
+                    <div className="flex justify-between items-center pt-3 mt-3 border-t border-border">
                         <div>
                             {editingDriver && (
                                 <Button type="button" variant={editingDriver.status === 'ACTIVE' ? 'danger' : 'primary'} onClick={handleToggleStatus}>
