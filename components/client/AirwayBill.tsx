@@ -33,7 +33,7 @@ export const AirwayBill: React.FC<AirwayBillProps> = ({ parcel }) => {
 
   // AWB designed to be approx. 19cm x 9cm to fit 3 on an A4 page
   return (
-    <div className="bg-white text-black p-2 rounded-md w-full max-w-4xl h-full border border-black relative" style={{ aspectRatio: '2 / 1' }}>
+    <div className="awb-print-size bg-white text-black p-2 rounded-md w-full max-w-4xl h-full border border-black relative" style={{ aspectRatio: '2 / 1' }}>
       {parcel.isOpenParcel && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform -rotate-15">
             <div className="text-4xl font-black text-red-500/50 border-4 border-red-500/50 rounded-lg px-4 py-1">

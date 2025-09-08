@@ -1,9 +1,11 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, Parcel, ParcelStatus, Invoice } from '../../types';
 import { useData } from '../../context/DataContext';
 import { Button } from '../shared/Button';
 import { Modal } from '../shared/Modal';
 import { AirwayBill } from './AirwayBill';
+import { ExchangeAirwayBill } from './ExchangeAirwayBill';
 import { SearchIcon } from '../icons/SearchIcon';
 import { ParcelDetailsModal } from '../shared/ParcelDetailsModal';
 import { ThemeToggle } from '../shared/ThemeToggle';
@@ -155,11 +157,45 @@ const BrandDashboard: React.FC<BrandDashboardProps> = ({ user, onLogout }) => {
                 <div className="printable-area">
                     {parcelsForAwb.length > 0 && (
                         <div className="joint-awb-container">
-                            {parcelsForAwb.map((p, i) => (
-                                <div key={`${p.id}-${i}`} className="single-awb-wrapper">
-                                    <AirwayBill parcel={p} />
-                                </div>
-                            ))}
+                            {(() => {
+                                const printedExchangePairs = new Set<string>();
+                                return parcelsForAwb.map(p => {
+                                    if (p.isExchange) {
+                                        const linkedParcel = allParcels.find(linked => linked.id === p.linkedParcelId);
+                                        if (!linkedParcel) {
+                                            // Fallback for an orphaned exchange parcel, just print a regular AWB for it.
+                                            return (
+                                                <div key={p.id} className="single-awb-wrapper">
+                                                    <AirwayBill parcel={p} />
+                                                </div>
+                                            );
+                                        }
+                                        
+                                        // The outbound parcel is the one WITHOUT returnItemDetails.
+                                        const isPOutbound = !p.returnItemDetails;
+                                        const outbound = isPOutbound ? p : linkedParcel;
+                                        const inbound = isPOutbound ? linkedParcel : p;
+
+                                        const pairKey = [outbound.id, inbound.id].sort().join('-');
+                                        if (printedExchangePairs.has(pairKey)) {
+                                            return null; // Avoids printing the AWB twice if both parcels of an exchange are selected
+                                        }
+                                        printedExchangePairs.add(pairKey);
+
+                                        return (
+                                            <div key={pairKey} className="single-awb-wrapper">
+                                                <ExchangeAirwayBill outboundParcel={outbound} returnParcel={inbound} />
+                                            </div>
+                                        );
+                                    } else {
+                                        return (
+                                            <div key={p.id} className="single-awb-wrapper">
+                                                <AirwayBill parcel={p} />
+                                            </div>
+                                        );
+                                    }
+                                });
+                            })()}
                         </div>
                     )}
                 </div>

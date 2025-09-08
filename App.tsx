@@ -1,4 +1,5 @@
 
+
 import React, { useState, createContext, useContext, useEffect, useMemo } from 'react';
 import { User, UserRole, Parcel } from './types';
 import { DataProvider } from './context/DataContext';
@@ -122,19 +123,23 @@ const AppContent: React.FC = () => {
             }
             /* Styles for joint AWB printing */
             .joint-awb-container {
-              display: flex;
-              flex-direction: column;
-              justify-content: space-around;
-              height: 100%;
+              display: block; /* Override flex */
             }
             .single-awb-wrapper {
-              height: 33.33%;
+              height: auto; /* Override height to let content size it */
               width: 100%;
               page-break-inside: avoid;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 0.25cm 0;
+              padding: 0; /* Remove padding which can cause overflow */
+              margin-bottom: 0.05cm; /* Add tiny spacing between AWBs */
+            }
+            .awb-print-size {
+              box-sizing: border-box; /* Ensure padding is included in dimensions */
+              height: 9.5cm; /* Explicit height for print */
+              width: 19cm; /* Explicit width for print */
+              margin: 0 auto; /* Center horizontally on the page */
+              /* Override inline/tailwind styles for print */
+              aspect-ratio: auto !important;
+              max-width: none !important;
             }
             .no-print {
               display: none;
