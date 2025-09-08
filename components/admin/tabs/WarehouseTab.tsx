@@ -70,29 +70,30 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
     const handleCloseScannerModal = useCallback(() => {
         setIsScannerModalOpen(false);
         setScanError(null);
-        processingScan.current = false;
     }, []);
 
     const onScanSuccess = useCallback((decodedText: string) => {
         if (processingScan.current) return;
         processingScan.current = true;
-
-        const foundParcel = parcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
-        if (foundParcel) {
-            const validNextSteps = getValidWarehouseStatuses(foundParcel);
-            if (validNextSteps.length > 0) {
-                setShowSuccessFeedback(true);
-                handleCloseScannerModal(); 
-                setScannedParcel(foundParcel);
-                setNewStatus(validNextSteps[0]);
-                setSelectedZone(foundParcel.deliveryZone || '');
-                setSelectedDriverId(''); // Reset driver selection
+        
+        try {
+            const foundParcel = parcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
+            if (foundParcel) {
+                const validNextSteps = getValidWarehouseStatuses(foundParcel);
+                if (validNextSteps.length > 0) {
+                    setShowSuccessFeedback(true);
+                    handleCloseScannerModal(); 
+                    setScannedParcel(foundParcel);
+                    setNewStatus(validNextSteps[0]);
+                    setSelectedZone(foundParcel.deliveryZone || '');
+                    setSelectedDriverId(''); // Reset driver selection
+                } else {
+                    setScanError(`Invalid Scan: Parcel status (${foundParcel.status}) cannot be updated at the warehouse.`);
+                }
             } else {
-                setScanError(`Invalid Scan: Parcel status (${foundParcel.status}) cannot be updated at the warehouse.`);
-                processingScan.current = false;
+                setScanError("Parcel not found in the system.");
             }
-        } else {
-            setScanError("Parcel not found in the system.");
+        } finally {
             processingScan.current = false;
         }
     }, [handleCloseScannerModal]);

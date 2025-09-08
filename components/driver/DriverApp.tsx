@@ -194,43 +194,42 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
     const handleCloseScannerModal = useCallback(() => {
         setIsScannerOpen(false);
         setScanError(null);
-        processingScan.current = false;
     }, []);
     
     const onScanSuccess = useCallback(async (decodedText: string) => {
         if (processingScan.current) return;
         processingScan.current = true;
 
-        const foundParcel = assignedParcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
+        try {
+            const foundParcel = assignedParcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
 
-        if (!foundParcel) {
-            setScanError('Scan failed: Parcel not found in your assigned tasks list.');
-            processingScan.current = false;
-            return;
-        }
-
-        const isMyPickupTask = (foundParcel.status === ParcelStatus.BOOKED || foundParcel.status === ParcelStatus.OUT_FOR_RETURN) && foundParcel.pickupDriverId === user.id;
-        const isMyDeliveryTask = ([ParcelStatus.OUT_FOR_DELIVERY, ParcelStatus.DELIVERY_FAILED].includes(foundParcel.status)) && foundParcel.deliveryDriverId === user.id;
-
-        if (isMyPickupTask) {
-            handleCloseScannerModal();
-            const nextStatus = foundParcel.status === ParcelStatus.BOOKED ? ParcelStatus.PICKED_UP : ParcelStatus.RETURNED;
-            await updateParcelStatus(foundParcel.id, nextStatus, user);
-            setShowSuccessFeedback(true);
-        } else if (isMyDeliveryTask) {
-            handleCloseScannerModal();
-            // Streamlined exchange logic: auto-complete on scan
-            if (foundParcel.isExchange) {
-                await updateParcelStatus(foundParcel.id, ParcelStatus.DELIVERED_EXCHANGE_COMPLETE, user);
-                setShowSuccessFeedback(true);
-            } else {
-                // For regular deliveries, open the modal for status selection.
-                setSelectedParcel(foundParcel);
-                const nextStatuses = getAvailableStatuses(foundParcel);
-                setNewStatus(nextStatuses.length > 0 ? nextStatuses[0] : '');
+            if (!foundParcel) {
+                setScanError('Scan failed: Parcel not found in your assigned tasks list.');
+                return;
             }
-        } else {
-            setScanError(`Scan invalid: Parcel not ready for your action. Current status: "${foundParcel.status}".`);
+
+            const isMyPickupTask = (foundParcel.status === ParcelStatus.BOOKED || foundParcel.status === ParcelStatus.OUT_FOR_RETURN) && foundParcel.pickupDriverId === user.id;
+            const isMyDeliveryTask = ([ParcelStatus.OUT_FOR_DELIVERY, ParcelStatus.DELIVERY_FAILED].includes(foundParcel.status)) && foundParcel.deliveryDriverId === user.id;
+
+            if (isMyPickupTask) {
+                handleCloseScannerModal();
+                const nextStatus = foundParcel.status === ParcelStatus.BOOKED ? ParcelStatus.PICKED_UP : ParcelStatus.RETURNED;
+                await updateParcelStatus(foundParcel.id, nextStatus, user);
+                setShowSuccessFeedback(true);
+            } else if (isMyDeliveryTask) {
+                handleCloseScannerModal();
+                if (foundParcel.isExchange) {
+                    await updateParcelStatus(foundParcel.id, ParcelStatus.DELIVERED_EXCHANGE_COMPLETE, user);
+                    setShowSuccessFeedback(true);
+                } else {
+                    setSelectedParcel(foundParcel);
+                    const nextStatuses = getAvailableStatuses(foundParcel);
+                    setNewStatus(nextStatuses.length > 0 ? nextStatuses[0] : '');
+                }
+            } else {
+                setScanError(`Scan invalid: Parcel not ready for your action. Current status: "${foundParcel.status}".`);
+            }
+        } finally {
             processingScan.current = false;
         }
     }, [handleCloseScannerModal, user, updateParcelStatus]);

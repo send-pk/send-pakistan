@@ -1,5 +1,5 @@
 {
-  "name": "SEND-pk",
+  "name": "send-pakistan",
   "description": "A comprehensive courier management system for SEND, a Lahore-based courier service. Features an admin dashboard for operations, a brand dashboard for booking, and a driver app.",
   "requestFramePermissions": [
     "camera",
