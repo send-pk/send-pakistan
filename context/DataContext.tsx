@@ -158,6 +158,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const now = new Date().toISOString();
         const outboundId = `p${Date.now()}`;
         const returnId = `p${Date.now() + 1}`;
+        const sharedTrackingNumber = `SDEX${outboundId.slice(-6).toUpperCase()}`;
 
         const outboundParcel: Parcel = {
             id: outboundId,
@@ -169,7 +170,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isExchange: true, orderId: newOutboundDetails.orderId, itemDetails: newOutboundDetails.itemDetails,
             codAmount: newOutboundDetails.codAmount, deliveryCharge, tax,
             deliveryInstructions: newOutboundDetails.deliveryInstructions, linkedParcelId: returnId,
-            trackingNumber: `SDEX${outboundId.slice(-6).toUpperCase()}`,
+            trackingNumber: sharedTrackingNumber,
             history: [{
                 status: ParcelStatus.BOOKED,
                 createdAt: now,
@@ -188,7 +189,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             itemDetails: `Return items for order ${originalParcel.orderId}`, 
             returnItemDetails: returnItemDetails,
             isCodReconciled: true, isExchange: true, linkedParcelId: outboundId,
-            trackingNumber: `SDRT${returnId.slice(-6).toUpperCase()}`,
+            trackingNumber: sharedTrackingNumber, // Use the same tracking number
             history: [{
                 status: ParcelStatus.PENDING_EXCHANGE_PICKUP,
                 createdAt: now,

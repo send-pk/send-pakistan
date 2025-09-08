@@ -72,21 +72,28 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
     }, []);
 
     const onScanSuccess = useCallback((decodedText: string) => {
-        const foundParcel = parcelsRef.current.find(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
-        if (foundParcel) {
-            const validNextSteps = getValidWarehouseStatuses(foundParcel);
-            if (validNextSteps.length > 0) {
-                setShowSuccessFeedback(true);
-                handleCloseScannerModal(); 
-                setScannedParcel(foundParcel);
-                setNewStatus(validNextSteps[0]);
-                setSelectedZone(foundParcel.deliveryZone || '');
-                setSelectedDriverId(''); // Reset driver selection
-            } else {
-                setScanError(`Invalid Scan: Parcel status (${foundParcel.status}) cannot be updated at the warehouse.`);
-            }
+        // Find a parcel that matches tracking AND has a valid next status for the warehouse to process.
+        // This correctly handles exchanges where two parcels share one tracking number.
+        const actionableParcel = parcelsRef.current.find(p => 
+            p.trackingNumber.toLowerCase() === decodedText.toLowerCase() &&
+            getValidWarehouseStatuses(p).length > 0
+        );
+        
+        if (actionableParcel) {
+            const validNextSteps = getValidWarehouseStatuses(actionableParcel);
+            setShowSuccessFeedback(true);
+            handleCloseScannerModal(); 
+            setScannedParcel(actionableParcel);
+            setNewStatus(validNextSteps[0]);
+            setSelectedZone(actionableParcel.deliveryZone || '');
+            setSelectedDriverId(''); // Reset driver selection
         } else {
-            setScanError("Parcel not found in the system.");
+            const parcelExists = parcelsRef.current.some(p => p.trackingNumber.toLowerCase() === decodedText.toLowerCase());
+            if (parcelExists) {
+                setScanError(`Invalid Scan: Parcel is not ready for a warehouse action.`);
+            } else {
+                setScanError("Parcel not found in the system.");
+            }
         }
     }, [handleCloseScannerModal]);
 

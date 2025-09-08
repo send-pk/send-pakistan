@@ -49,7 +49,7 @@ export const ExchangeAirwayBill: React.FC<ExchangeAirwayBillProps> = ({ outbound
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-grow flex border-b-2 border-black">
+            <div className="flex-grow flex">
                 {/* Left Box: Outbound/Delivery */}
                 <div className="w-1/2 border-r-2 border-black p-2 flex flex-col justify-between text-xs">
                     <div>
@@ -79,6 +79,16 @@ export const ExchangeAirwayBill: React.FC<ExchangeAirwayBillProps> = ({ outbound
                         <p className="mt-auto font-bold text-center text-sm">NO COD FOR RETURN</p>
                     </div>
                 </div>
+            </div>
+
+            {/* Customer Instructions */}
+            <div className="border-y-2 border-black mt-1 p-1 text-center">
+                <p className="font-bold text-xs">CUSTOMER INSTRUCTIONS:</p>
+                <p className="text-[10px] leading-tight">
+                    1. Receive your new items from the delivery box.
+                    2. Place your return items inside the same box.
+                    3. Peel this label and stick it onto the box for the driver.
+                </p>
             </div>
 
             {/* Barcode Footer */}
