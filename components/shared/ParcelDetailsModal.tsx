@@ -173,6 +173,7 @@ export const ParcelDetailsModal: React.FC<{ isOpen: boolean; onClose: () => void
                                  <DetailSection title="Parcel Information" icon={<PackageIcon className="w-5 h-5 text-primary" />}>
                                     <p><strong>Order ID:</strong> <span className="text-content-primary">{parcel.orderId}</span></p>
                                     <p><strong>Delivery Zone:</strong> <span className="text-content-primary font-semibold">{parcel.deliveryZone || 'N/A'}</span></p>
+                                    <p><strong>Weight:</strong> <span className="text-content-primary font-semibold">{parcel.weight.toFixed(1)} kg</span></p>
                                      {parcel.isExchange ? (
                                         <p><strong>Type:</strong> <span className="font-semibold text-content-primary inline-flex items-center gap-1.5">Exchange Shipment <ArrowPathIcon className="w-4 h-4 text-purple-500" /></span></p>
                                     ) : parcel.isOpenParcel ? (
@@ -182,6 +183,7 @@ export const ParcelDetailsModal: React.FC<{ isOpen: boolean; onClose: () => void
                                         <p><strong>Linked Parcel:</strong> <span className="font-mono text-primary-dark">{linkedParcel.trackingNumber}</span></p>
                                     )}
                                     <p><strong>Brand:</strong> <span className="text-content-primary">{parcel.brandName}</span></p>
+                                    <p><strong>Pickup From:</strong> <span className="text-content-primary font-semibold">{parcel.pickupAddress || 'N/A'}</span></p>
                                     <p><strong>Item Details:</strong> <span className="text-content-primary">{parcel.itemDetails}</span></p>
                                     {parcel.returnItemDetails && <p><strong>Return Items:</strong> <span className="text-content-primary font-semibold">{formatReturnItems(parcel.returnItemDetails)}</span></p>}
                                     {parcel.deliveryInstructions && <p><strong>Instructions:</strong> <span className="text-content-primary">{parcel.deliveryInstructions}</span></p>}

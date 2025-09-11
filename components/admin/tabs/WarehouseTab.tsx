@@ -13,6 +13,7 @@ import { DELIVERY_ZONES } from '../../../constants';
 
 declare var Html5Qrcode: any;
 
+const FormInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} className={`w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors ${props.className}`} />;
 const FormSelect = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} className={`w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors ${props.className}`} />;
 const FormLabel = ({ children, htmlFor }: { children: React.ReactNode, htmlFor?: string }) => <label htmlFor={htmlFor} className="block mb-2 text-sm text-content-secondary font-medium">{children}</label>;
 
@@ -39,6 +40,7 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
     const [newStatus, setNewStatus] = useState<ParcelStatus | ''>('');
     const [selectedZone, setSelectedZone] = useState<string>('');
     const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+    const [updatedWeight, setUpdatedWeight] = useState<string>('');
 
     const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
             setShowSuccessFeedback(true);
             handleCloseScannerModal(); 
             setScannedParcel(actionableParcel);
+            setUpdatedWeight(String(actionableParcel.weight));
             setNewStatus(validNextSteps[0]);
             setSelectedZone(actionableParcel.deliveryZone || '');
             setSelectedDriverId(''); // Reset driver selection
@@ -137,6 +140,7 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
         setNewStatus('');
         setSelectedZone('');
         setSelectedDriverId('');
+        setUpdatedWeight('');
     };
 
     const handleUpdateSubmit = () => {
@@ -145,13 +149,19 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
                 alert('Please assign a delivery zone.');
                 return;
             }
+            const weightValue = parseFloat(updatedWeight);
+            if(newStatus === ParcelStatus.AT_HUB && (isNaN(weightValue) || weightValue <= 0)) {
+                alert('Please enter a valid weight.');
+                return;
+            }
             if(newStatus === ParcelStatus.OUT_FOR_DELIVERY && !selectedDriverId) {
                 alert('Please assign a delivery driver.');
                 return;
             }
             const details = {
                 deliveryZone: newStatus === ParcelStatus.AT_HUB ? selectedZone : undefined,
-                driverId: newStatus === ParcelStatus.OUT_FOR_DELIVERY ? selectedDriverId : undefined
+                driverId: newStatus === ParcelStatus.OUT_FOR_DELIVERY ? selectedDriverId : undefined,
+                weight: newStatus === ParcelStatus.AT_HUB ? weightValue : undefined,
             };
             updateParcelStatus(scannedParcel.id, newStatus, user, details);
             handleModalClose();
@@ -205,12 +215,18 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
                         </div>
 
                         {newStatus === ParcelStatus.AT_HUB && (
-                             <div>
-                                <FormLabel htmlFor="deliveryZone">Assign Delivery Zone</FormLabel>
-                                <FormSelect id="deliveryZone" value={selectedZone} onChange={e => setSelectedZone(e.target.value)} required>
-                                    <option value="">Select a zone</option>
-                                    {DELIVERY_ZONES.map(zone => <option key={zone} value={zone}>{zone}</option>)}
-                                </FormSelect>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <FormLabel htmlFor="deliveryZone">Assign Delivery Zone</FormLabel>
+                                    <FormSelect id="deliveryZone" value={selectedZone} onChange={e => setSelectedZone(e.target.value)} required>
+                                        <option value="">Select a zone</option>
+                                        {DELIVERY_ZONES.map(zone => <option key={zone} value={zone}>{zone}</option>)}
+                                    </FormSelect>
+                                </div>
+                                 <div>
+                                    <FormLabel htmlFor="parcelWeight">Verify Parcel Weight (kg)</FormLabel>
+                                    <FormInput id="parcelWeight" type="number" step="0.1" min="0.1" value={updatedWeight} onChange={e => setUpdatedWeight(e.target.value)} required />
+                                </div>
                             </div>
                         )}
 

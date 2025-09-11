@@ -14,8 +14,10 @@ import { WarehouseTab } from './tabs/WarehouseTab';
 import { FinanceTab } from './tabs/FinanceTab';
 import { BrandsTab } from './tabs/BrandsTab';
 import { DriversTab } from './tabs/DriversTab';
+import { SalesTab } from './tabs/SalesTab';
 import { LogoutIcon } from '../icons/LogoutIcon';
 import { PENDING_PARCEL_STATUSES } from '../../constants';
+import { UsersIcon } from '../icons/UsersIcon';
 
 // Helper to format date to YYYY-MM-DD for input fields
 const toInputDate = (date: Date) => {
@@ -32,7 +34,7 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     const { parcels: allParcels, users, invoices } = useData();
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'warehouse' | 'finance' | 'brands' | 'drivers'>(
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'warehouse' | 'finance' | 'brands' | 'drivers' | 'sales'>(
         user.role === UserRole.WAREHOUSE_MANAGER ? 'warehouse' : 'dashboard'
     );
     
@@ -133,9 +135,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             <NavButton tabName="finance">Finance</NavButton>
                             <NavButton tabName="brands">Brands</NavButton>
                             <NavButton tabName="drivers">Drivers</NavButton>
+                            <NavButton tabName="sales"><UsersIcon className="w-4 h-4"/>Sales</NavButton>
                         </nav>
                     )}
-                     {user.role === UserRole.ADMIN && activeTab !== 'warehouse' && (
+                     {(user.role === UserRole.ADMIN) && (
                         <div className="w-full lg:w-auto flex-shrink-0">
                             <DateFilter
                                 dateFilter={dateFilter}
@@ -154,6 +157,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     {activeTab === 'finance' && user.role === UserRole.ADMIN && <FinanceTab parcelsForDateRange={parcels} allParcels={allParcels} users={users}/>}
                     {activeTab === 'brands' && user.role === UserRole.ADMIN && <BrandsTab />}
                     {activeTab === 'drivers' && user.role === UserRole.ADMIN && <DriversTab parcels={parcels} allParcels={allParcels} user={user} />}
+                    {activeTab === 'sales' && user.role === UserRole.ADMIN && <SalesTab parcels={parcels} dateFilter={dateFilter} customStartDate={customStartDate} customEndDate={customEndDate} />}
                 </div>
             </main>
 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
-import { Parcel, User, ParcelStatus, UserRole, Invoice, DataContextType, ParcelHistoryEvent, ReconciliationDetails, DutyLogEvent, Item } from '../types';
+import { Parcel, User, ParcelStatus, UserRole, Invoice, DataContextType, ParcelHistoryEvent, ReconciliationDetails, DutyLogEvent, Item, SalaryPayment } from '../types';
 import { PARCELS, USERS } from '../constants';
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -8,9 +8,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [parcels, setParcels] = useState<Parcel[]>(PARCELS);
     const [users, setUsers] = useState<User[]>(USERS);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
 
-    const updateParcelStatus = useCallback(async (parcelId: string, status: ParcelStatus, currentUser?: User, details?: { reason?: string; proof?: string; deliveryZone?: string; driverId?: string }) => {
+    const updateParcelStatus = useCallback(async (parcelId: string, status: ParcelStatus, currentUser?: User, details?: { reason?: string; proof?: string; deliveryZone?: string; driverId?: string; weight?: number; }) => {
         setParcels(currentParcels => {
             const newParcels = [...currentParcels];
             const mainParcelIndex = newParcels.findIndex(p => p.id === parcelId);
@@ -49,9 +50,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     deliveryZone: details?.deliveryZone || mainParcel.deliveryZone,
                 };
                 
+                if (details?.weight !== undefined) {
+                    updateData.weight = details.weight;
+                }
+                
                 const notes: string[] = [];
                 if (details?.reason) notes.push(`Reason: ${details.reason}`);
                 if (details?.deliveryZone) notes.push(`Assigned to Delivery Zone: ${details.deliveryZone}`);
+                if (details?.weight !== undefined && details.weight !== mainParcel.weight) {
+                    notes.push(`Weight updated from ${mainParcel.weight.toFixed(1)}kg to ${details.weight.toFixed(1)}kg.`);
+                }
                 
                 if (status === ParcelStatus.OUT_FOR_DELIVERY && details?.driverId) {
                     updateData.deliveryDriverId = details.driverId;
@@ -80,7 +88,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 
                 if (status === ParcelStatus.PENDING_RETURN) {
                     const brand = users.find(u => u.id === mainParcel.brandId);
-                    updateData.pickupDriverId = brand?.assignedPickupDriverId;
+                    const defaultPickupLocation = brand?.pickupLocations?.[0];
+                    updateData.pickupDriverId = defaultPickupLocation?.assignedDriverId;
                     updateData.deliveryDriverId = undefined;
                 }
 
@@ -116,11 +125,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     }, []);
 
-    const bookNewParcel = useCallback(async (newParcelData: Omit<Parcel, 'id' | 'trackingNumber' | 'createdAt' | 'updatedAt' | 'status' | 'pickupDriverId' | 'deliveryDriverId' | 'deliveryCharge' | 'tax' | 'isCodReconciled' | 'invoiceId' | 'failedAttemptReason' | 'proofOfAttempt' | 'history' | 'returnItemDetails'>): Promise<Parcel | null> => {
+    const bookNewParcel = useCallback(async (newParcelData: Omit<Parcel, 'id' | 'trackingNumber' | 'createdAt' | 'updatedAt' | 'status' | 'pickupDriverId' | 'deliveryDriverId' | 'deliveryCharge' | 'tax' | 'isCodReconciled' | 'invoiceId' | 'failedAttemptReason' | 'proofOfAttempt' | 'history' | 'returnItemDetails' | 'pickupAddress'> & { pickupLocationId: string }): Promise<Parcel | null> => {
         const brand = users.find(u => u.id === newParcelData.brandId);
-        const deliveryCharge = brand?.deliveryCharge || 0;
-        const tax = deliveryCharge * 0.16;
-        const assignedPickupDriverId = brand?.assignedPickupDriverId;
+        if (!brand) return null;
+        
+        const pickupLocation = brand.pickupLocations?.find(loc => loc.id === newParcelData.pickupLocationId);
+        if (!pickupLocation) {
+            console.error("Selected pickup location not found for the brand.");
+            return null;
+        }
+
+        // Calculate delivery charge based on brand's tier-based settings
+        const weightKey = String(newParcelData.weight);
+        const chargeForWeight = brand?.weightCharges?.[weightKey] ?? 100; // Default to 100 if tier not found
+        const fuelSurchargePercent = brand?.fuelSurcharge ?? 10;
+        
+        const fuelCharge = chargeForWeight * (fuelSurchargePercent / 100);
+        const finalDeliveryCharge = chargeForWeight + fuelCharge;
+        const tax = finalDeliveryCharge * 0.16;
+        
         const trackingNumber = `SD${Date.now().toString().slice(-6)}`;
         
         const parcelToAdd: Parcel = {
@@ -128,9 +151,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             id: `p${Date.now()}`,
             trackingNumber,
             status: ParcelStatus.BOOKED,
-            pickupDriverId: assignedPickupDriverId,
+            pickupDriverId: pickupLocation.assignedDriverId,
+            pickupAddress: pickupLocation.address,
             deliveryDriverId: undefined,
-            deliveryCharge, tax, 
+            deliveryCharge: finalDeliveryCharge, 
+            tax, 
             isCodReconciled: newParcelData.codAmount > 0 ? false : true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -138,7 +163,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 status: ParcelStatus.BOOKED,
                 createdAt: new Date().toISOString(),
                 updatedBy: newParcelData.brandName,
-                notes: "Parcel booking created."
+                notes: `Parcel booked from: ${pickupLocation.address}`
             }],
         };
         
@@ -151,9 +176,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!originalParcel) return null;
 
         const brand = users.find(u => u.id === originalParcel.brandId);
-        const deliveryCharge = brand?.deliveryCharge || 0;
+        // Use a default weight and find its charge for exchange parcels
+        const defaultWeight = 1.0;
+        const weightKey = String(defaultWeight);
+        const chargeForWeight = brand?.weightCharges?.[weightKey] ?? 100;
+        const fuelSurchargePercent = brand?.fuelSurcharge ?? 10;
+        const fuelCharge = chargeForWeight * (fuelSurchargePercent / 100);
+        const deliveryCharge = chargeForWeight + fuelCharge;
         const tax = deliveryCharge * 0.16;
-        const assignedPickupDriverId = brand?.assignedPickupDriverId;
+
+        const defaultPickupLocation = brand?.pickupLocations?.[0];
         
         const now = new Date().toISOString();
         const outboundId = `p${Date.now()}`;
@@ -164,8 +196,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             id: outboundId,
             brandId: originalParcel.brandId, brandName: originalParcel.brandName, recipientName: originalParcel.recipientName,
             recipientAddress: originalParcel.recipientAddress, recipientPhone: originalParcel.recipientPhone,
-            status: ParcelStatus.BOOKED, pickupDriverId: assignedPickupDriverId,
+            status: ParcelStatus.BOOKED, pickupDriverId: defaultPickupLocation?.assignedDriverId,
+            pickupAddress: defaultPickupLocation?.address,
             deliveryDriverId: undefined,
+            weight: defaultWeight,
             isCodReconciled: newOutboundDetails.codAmount > 0 ? false : true, createdAt: now, updatedAt: now,
             isExchange: true, orderId: newOutboundDetails.orderId, itemDetails: newOutboundDetails.itemDetails,
             codAmount: newOutboundDetails.codAmount, deliveryCharge, tax,
@@ -185,7 +219,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             recipientName: originalParcel.recipientName, recipientAddress: originalParcel.recipientAddress, recipientPhone: originalParcel.recipientPhone,
             status: ParcelStatus.PENDING_EXCHANGE_PICKUP, pickupDriverId: undefined,
             deliveryDriverId: undefined,
-            codAmount: 0, deliveryCharge: 0, tax: 0, createdAt: now, updatedAt: now,
+            codAmount: 0, weight: 1.0, deliveryCharge: 0, tax: 0, createdAt: now, updatedAt: now,
             itemDetails: `Return items for order ${originalParcel.orderId}`, 
             returnItemDetails: returnItemDetails,
             isCodReconciled: true, isExchange: true, linkedParcelId: outboundId,
@@ -251,8 +285,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const updateBrand = useCallback(async (brandId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
         const cleanData: any = { ...updatedData };
-        if (cleanData.assignedPickupDriverId === 'unassigned') {
-            cleanData.assignedPickupDriverId = undefined;
+        // Clean up unassigned drivers from pickup locations before saving
+        if (cleanData.pickupLocations) {
+            cleanData.pickupLocations = cleanData.pickupLocations.map((loc: any) => {
+                if (loc.assignedDriverId === 'unassigned') {
+                    return { ...loc, assignedDriverId: undefined };
+                }
+                return loc;
+            });
         }
         setUsers(prev => prev.map(u => u.id === brandId ? { ...u, ...cleanData } : u));
     }, []);
@@ -266,6 +306,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUsers(prev => prev.map(u => u.id === driverId ? { ...u, ...updatedData } : u));
     }, []);
     
+    const addNewSalesManager = useCallback(async (managerData: Omit<User, 'id' | 'role' | 'status'>) => {
+        const newManager: User = { ...managerData, id: `sm-${Date.now()}`, role: UserRole.SALES_MANAGER, status: 'ACTIVE' };
+        setUsers(prev => [...prev, newManager]);
+    }, []);
+
+    const updateSalesManager = useCallback(async (managerId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
+        setUsers(prev => prev.map(u => u.id === managerId ? { ...u, ...updatedData } : u));
+    }, []);
+
+    const addNewDirectSales = useCallback(async (salesData: Omit<User, 'id' | 'role' | 'status'>) => {
+        const newSales: User = { ...salesData, id: `ds-${Date.now()}`, role: UserRole.DIRECT_SALES, status: 'ACTIVE' };
+        setUsers(prev => [...prev, newSales]);
+    }, []);
+
+    const updateDirectSales = useCallback(async (salesId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
+        setUsers(prev => prev.map(u => u.id === salesId ? { ...u, ...updatedData } : u));
+    }, []);
+
     const toggleUserStatus = useCallback(async (userId: string) => {
         const user = users.find(u => u.id === userId);
         if (!user) return;
@@ -380,6 +438,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
     }, []);
 
+    const markSalaryAsPaid = useCallback(async (paymentData: Omit<SalaryPayment, 'id' | 'status' | 'paidAt'>) => {
+        setSalaryPayments(prev => {
+            const existingIndex = prev.findIndex(p => 
+                p.userId === paymentData.userId && 
+                p.periodStartDate === paymentData.periodStartDate && 
+                p.periodEndDate === paymentData.periodEndDate
+            );
+
+            if (existingIndex > -1) {
+                // This case should ideally not happen if UI only allows paying unpaid salaries, but it's safe to handle.
+                const updatedPayments = [...prev];
+                updatedPayments[existingIndex] = {
+                    ...updatedPayments[existingIndex],
+                    ...paymentData,
+                    status: 'PAID',
+                    paidAt: new Date().toISOString(),
+                };
+                return updatedPayments;
+            } else {
+                const newPayment: SalaryPayment = {
+                    ...paymentData,
+                    id: `sal-${Date.now()}`,
+                    status: 'PAID',
+                    paidAt: new Date().toISOString(),
+                };
+                return [...prev, newPayment];
+            }
+        });
+    }, []);
+
     const addBrandRemark = useCallback(async (parcelId: string, remark: string) => {
         setParcels(prev => prev.map(p => p.id === parcelId ? { ...p, brandRemark: remark, updatedAt: new Date().toISOString() } : p));
     }, []);
@@ -405,21 +493,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const value = useMemo(() => ({
-        parcels, users, invoices, loading,
+        parcels, users, invoices, salaryPayments, loading,
         updateParcelStatus, bookNewParcel, addNewBrand, updateBrand, 
         addNewDriver, updateDriver, deleteParcel,
         generateInvoiceForPayout, markInvoiceAsPaid, reconcileDriverCod,
         addBrandRemark, updateDriverLocation, updateMultipleParcelStatuses,
         addShipperAdvice, manuallyAssignDriver, initiateExchange, reassignDriverJobs,
-        toggleDriverDutyStatus, toggleUserStatus
+        toggleDriverDutyStatus, toggleUserStatus,
+        addNewSalesManager, updateSalesManager,
+        addNewDirectSales, updateDirectSales,
+        markSalaryAsPaid,
     }), [
-        parcels, users, invoices, loading,
+        parcels, users, invoices, salaryPayments, loading,
         updateParcelStatus, bookNewParcel, addNewBrand, updateBrand, 
         addNewDriver, updateDriver, deleteParcel,
         generateInvoiceForPayout, markInvoiceAsPaid, reconcileDriverCod,
         addBrandRemark, updateDriverLocation, updateMultipleParcelStatuses,
         addShipperAdvice, manuallyAssignDriver, initiateExchange, reassignDriverJobs,
-        toggleDriverDutyStatus, toggleUserStatus
+        toggleDriverDutyStatus, toggleUserStatus,
+        addNewSalesManager, updateSalesManager,
+        addNewDirectSales, updateDirectSales,
+        markSalaryAsPaid,
     ]);
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -107,7 +107,7 @@ const AppContent: React.FC = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 0.5cm;
+              margin: 1cm;
             }
             body * {
               visibility: hidden;
@@ -120,7 +120,42 @@ const AppContent: React.FC = () => {
               left: 0;
               top: 0;
               width: 100%;
+              color: #000;
             }
+            /* General Print Typography & Tables */
+            .printable-area table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 24px;
+                font-size: 10pt;
+            }
+            .printable-area th, .printable-area td {
+                border: 1px solid #999;
+                padding: 6px;
+                text-align: left;
+            }
+            .printable-area thead th {
+                background-color: #eee;
+                font-weight: bold;
+            }
+            .printable-area .text-right {
+                text-align: right;
+            }
+            .printable-area .font-bold {
+                font-weight: bold;
+            }
+            /* Salary Report Specific Styles */
+            .printable-area .sub-row > td {
+                padding-left: 24px;
+                border: none;
+                font-size: 9pt;
+                color: #333;
+            }
+             .printable-area .total-row > td {
+                font-weight: bold;
+                border-top: 2px solid #000;
+                background-color: #f9f9f9;
+             }
             /* Styles for joint AWB printing */
             .joint-awb-container {
               display: block; /* Override flex */
@@ -142,7 +177,7 @@ const AppContent: React.FC = () => {
               max-width: none !important;
             }
             .no-print {
-              display: none;
+              display: none !important;
             }
             /* Styles for multi-page invoices */
             thead {

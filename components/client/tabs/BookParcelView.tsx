@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Item } from '../../../types';
 import { useData } from '../../../context/DataContext';
 import { Card } from '../../shared/Card';
 import { Button } from '../../shared/Button';
 import { TrashIcon } from '../../icons/TrashIcon';
 import { PlusIcon } from '../../icons/PlusIcon';
+import { WEIGHT_TIERS } from '../../../constants';
 
 const FormInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} className={`w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors disabled:bg-border ${props.className}`} />;
 const FormLabel = ({ children, htmlFor, className }: { children: React.ReactNode, htmlFor?: string, className?: string }) => <label htmlFor={htmlFor} className={`block mb-2 text-sm text-content-secondary font-medium ${className || ''}`}>{children}</label>;
+const FormSelect = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} className={`w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors ${props.className}`} />;
 const FormTextarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} className={`w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors ${props.className}`} />;
 
 interface BookParcelViewProps {
@@ -21,14 +23,23 @@ const initialParcelState = {
     recipientAddress: '',
     recipientPhone: '',
     codAmount: '0',
+    weight: '0.5',
     itemDetails: '',
     deliveryInstructions: '',
     isOpenParcel: false,
+    pickupLocationId: '',
 };
 
 export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingSuccess }) => {
     const { bookNewParcel } = useData();
     const [newParcel, setNewParcel] = useState(initialParcelState);
+
+    useEffect(() => {
+        // Pre-select the first pickup location if available
+        if (user.pickupLocations && user.pickupLocations.length > 0) {
+            setNewParcel(prev => ({ ...prev, pickupLocationId: user.pickupLocations![0].id }));
+        }
+    }, [user.pickupLocations]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const target = e.target as HTMLInputElement;
@@ -39,6 +50,11 @@ export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingS
     const handleBookParcel = (e: React.FormEvent) => {
         e.preventDefault();
         
+        if (!newParcel.pickupLocationId) {
+            alert('Please select a pickup location.');
+            return;
+        }
+
         bookNewParcel({ 
             brandId: user.id, 
             brandName: user.name, 
@@ -47,9 +63,11 @@ export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingS
             recipientAddress: newParcel.recipientAddress, 
             recipientPhone: newParcel.recipientPhone, 
             codAmount: parseFloat(newParcel.codAmount), 
+            weight: parseFloat(newParcel.weight),
             itemDetails: newParcel.itemDetails,
             deliveryInstructions: newParcel.deliveryInstructions,
             isOpenParcel: newParcel.isOpenParcel,
+            pickupLocationId: newParcel.pickupLocationId,
         });
         setNewParcel(initialParcelState);
         onBookingSuccess();
@@ -66,10 +84,26 @@ export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingS
                     <div> <FormLabel htmlFor="recipientPhone">Recipient Phone</FormLabel> <FormInput id="recipientPhone" name="recipientPhone" value={newParcel.recipientPhone} onChange={handleInputChange} required /> </div>
                     <div className="md:col-span-2"> <FormLabel htmlFor="recipientAddress">Recipient Address</FormLabel> <FormInput id="recipientAddress" name="recipientAddress" value={newParcel.recipientAddress} onChange={handleInputChange} required /> </div>
                 </div>
-                
-                <div>
-                    <FormLabel htmlFor="itemDetails">Item Details (optional)</FormLabel>
-                    <FormInput id="itemDetails" name="itemDetails" value={newParcel.itemDetails} onChange={handleInputChange} placeholder="e.g., 2x Lawn Suit, 1x Perfume" />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <FormLabel htmlFor="weight">Parcel Weight (kg)</FormLabel>
+                        <FormSelect id="weight" name="weight" value={newParcel.weight} onChange={handleInputChange} required>
+                           {WEIGHT_TIERS.map(w => <option key={w} value={w}>{w.toFixed(1)} kg</option>)}
+                        </FormSelect>
+                    </div>
+                     <div>
+                        <FormLabel htmlFor="pickupLocationId">Pickup Location</FormLabel>
+                        <FormSelect id="pickupLocationId" name="pickupLocationId" value={newParcel.pickupLocationId} onChange={handleInputChange} required>
+                           <option value="" disabled>Select a location</option>
+                           {user.pickupLocations?.map(loc => <option key={loc.id} value={loc.id}>{loc.address}</option>)}
+                        </FormSelect>
+                        {(!user.pickupLocations || user.pickupLocations.length === 0) && <p className="text-xs text-red-500 mt-1">No pickup locations configured. Please contact admin.</p>}
+                    </div>
+                    <div className="md:col-span-2">
+                        <FormLabel htmlFor="itemDetails">Item Details (optional)</FormLabel>
+                        <FormInput id="itemDetails" name="itemDetails" value={newParcel.itemDetails} onChange={handleInputChange} placeholder="e.g., 2x Lawn Suit, 1x Perfume" />
+                    </div>
                 </div>
                 
                 <div>
@@ -105,7 +139,7 @@ export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingS
                 </div>
                 
                 <div className="flex justify-end mt-6">
-                    <Button type="submit" size="lg">Book Parcel</Button>
+                    <Button type="submit" size="lg" disabled={!user.pickupLocations || user.pickupLocations.length === 0}>Book Parcel</Button>
                 </div>
             </form>
         </Card>

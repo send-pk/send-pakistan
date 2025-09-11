@@ -56,11 +56,11 @@ export const AirwayBill: React.FC<AirwayBillProps> = ({ parcel }) => {
           {/* Left: Shipper/Consignee */}
           <div className="w-2/3 border-r-2 border-black p-2 flex flex-col justify-between">
             <div>
-              <p className="text-xs font-bold">BRAND:</p>
-              <p className="text-sm">{parcel.brandName}</p>
+              <p className="text-xs font-bold">PICKUP FROM ({parcel.brandName}):</p>
+              <p className="text-sm">{parcel.pickupAddress || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-xs font-bold">CONSIGNEE:</p>
+              <p className="text-xs font-bold">DELIVER TO:</p>
               <p className="text-sm font-semibold">{parcel.recipientName}</p>
               <p className="text-xs">{parcel.recipientAddress}</p>
               <p className="text-xs">{parcel.recipientPhone}</p>
@@ -70,6 +70,7 @@ export const AirwayBill: React.FC<AirwayBillProps> = ({ parcel }) => {
           {/* Right: Order Info */}
           <div className="w-1/3 p-2 text-xs">
             <p><span className="font-bold">Date:</span> {new Date(parcel.createdAt).toLocaleDateString()}</p>
+            <p><span className="font-bold">Weight:</span> {parcel.weight.toFixed(1)} kg</p>
             <p className="mt-2"><span className="font-bold">Order ID:</span> {parcel.orderId}</p>
           </div>
         </div>
