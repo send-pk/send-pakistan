@@ -1,154 +1,198 @@
-import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { Parcel, User, ParcelStatus, UserRole, Invoice, DataContextType, ParcelHistoryEvent, ReconciliationDetails, DutyLogEvent, Item, SalaryPayment } from '../types';
-import { PARCELS, USERS } from '../constants';
+import { supabase } from '../supabase';
+
+// Case conversion helpers to map between JS camelCase and Postgres snake_case
+const toCamel = (s: string): string => {
+  return s.replace(/([-_][a-z])/ig, ($1) => {
+    return $1.toUpperCase().replace('-', '').replace('_', '');
+  });
+};
+const isObject = (obj: any): boolean => obj === Object(obj) && !Array.isArray(obj) && typeof obj !== 'function';
+const keysToCamel = (obj: any): any => {
+  if (isObject(obj)) {
+    const n: { [key: string]: any } = {};
+    Object.keys(obj).forEach((k) => {
+      n[toCamel(k)] = keysToCamel(obj[k]);
+    });
+    return n;
+  } else if (Array.isArray(obj)) {
+    return obj.map((i) => keysToCamel(i));
+  }
+  return obj;
+};
+const toSnake = (str: string): string => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+const keysToSnake = (obj: any): any => {
+    if (Array.isArray(obj)) {
+        return obj.map(v => keysToSnake(v));
+    } else if (obj !== null && obj.constructor === Object) {
+        return Object.keys(obj).reduce((acc, key) => ({
+            ...acc,
+            [toSnake(key)]: keysToSnake(obj[key]),
+        }), {});
+    }
+    return obj;
+};
+
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [parcels, setParcels] = useState<Parcel[]>(PARCELS);
-    const [users, setUsers] = useState<User[]>(USERS);
+    const [parcels, setParcels] = useState<Parcel[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const [parcelsRes, usersRes, invoicesRes, salaryPaymentsRes] = await Promise.all([
+                    supabase.from('parcels').select('*'),
+                    supabase.from('users').select('*'),
+                    supabase.from('invoices').select('*'),
+                    supabase.from('salary_payments').select('*')
+                ]);
+
+                if (parcelsRes.error) {
+                    console.error("Error fetching parcels:", parcelsRes.error);
+                } else {
+                    setParcels(keysToCamel(parcelsRes.data || []));
+                }
+    
+                if (usersRes.error) {
+                    console.error("Error fetching users:", usersRes.error);
+                } else {
+                    setUsers(keysToCamel(usersRes.data || []));
+                }
+    
+                if (invoicesRes.error) {
+                    console.error("Error fetching invoices:", invoicesRes.error);
+                } else {
+                    setInvoices(keysToCamel(invoicesRes.data || []));
+                }
+    
+                if (salaryPaymentsRes.error) {
+                    console.error("Error fetching salary payments:", salaryPaymentsRes.error);
+                } else {
+                    setSalaryPayments(keysToCamel(salaryPaymentsRes.data || []));
+                }
+
+            } catch (error) {
+                console.error("A critical error occurred while fetching data from Supabase:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     const updateParcelStatus = useCallback(async (parcelId: string, status: ParcelStatus, currentUser?: User, details?: { reason?: string; proof?: string; deliveryZone?: string; driverId?: string; weight?: number; }) => {
-        setParcels(currentParcels => {
-            const newParcels = [...currentParcels];
-            const mainParcelIndex = newParcels.findIndex(p => p.id === parcelId);
-            if (mainParcelIndex === -1) return currentParcels;
+        const mainParcel = parcels.find(p => p.id === parcelId);
+        if (!mainParcel) return;
+        
+        const handleError = (error: any, context: string) => console.error(`Error ${context}:`, error);
 
-            const mainParcel = newParcels[mainParcelIndex];
+        if (status === ParcelStatus.DELIVERED_EXCHANGE_COMPLETE) {
+            const deliveredHistoryEvent: ParcelHistoryEvent = { status: ParcelStatus.DELIVERED, createdAt: new Date().toISOString(), updatedBy: currentUser?.name || 'System', notes: 'Exchange outbound delivered.' };
+            const mainUpdate = { status: ParcelStatus.DELIVERED, updatedAt: new Date().toISOString(), history: [...mainParcel.history, deliveredHistoryEvent] };
+            
+            const { error: mainError } = await supabase.from('parcels').update(keysToSnake(mainUpdate)).eq('id', parcelId);
+            if (mainError) return handleError(mainError, 'updating main exchange parcel');
+            
+            setParcels(prev => prev.map(p => p.id === parcelId ? { ...p, ...mainUpdate } : p));
 
-            if (status === ParcelStatus.DELIVERED_EXCHANGE_COMPLETE) {
-                const deliveredHistoryEvent: ParcelHistoryEvent = {
-                    status: ParcelStatus.DELIVERED,
-                    createdAt: new Date().toISOString(),
-                    updatedBy: currentUser?.name || 'System',
-                    notes: 'Exchange outbound delivered.',
-                };
-                newParcels[mainParcelIndex] = { ...mainParcel, status: ParcelStatus.DELIVERED, updatedAt: new Date().toISOString(), history: [...mainParcel.history, deliveredHistoryEvent] };
-                
-                if (mainParcel.linkedParcelId) {
-                    const linkedParcelIndex = newParcels.findIndex(p => p.id === mainParcel.linkedParcelId);
-                    if (linkedParcelIndex !== -1) {
-                        const linkedParcel = newParcels[linkedParcelIndex];
-                        const pickedUpHistoryEvent: ParcelHistoryEvent = {
-                            status: ParcelStatus.PICKED_UP,
-                            createdAt: new Date().toISOString(),
-                            updatedBy: currentUser?.name || 'System',
-                            notes: 'Exchange return collected.',
-                        };
-                        newParcels[linkedParcelIndex] = { ...linkedParcel, status: ParcelStatus.PICKED_UP, updatedAt: new Date().toISOString(), history: [...linkedParcel.history, pickedUpHistoryEvent] };
-                    }
+            if (mainParcel.linkedParcelId) {
+                const linkedParcel = parcels.find(p => p.id === mainParcel.linkedParcelId);
+                if (linkedParcel) {
+                    const pickedUpHistoryEvent: ParcelHistoryEvent = { status: ParcelStatus.PICKED_UP, createdAt: new Date().toISOString(), updatedBy: currentUser?.name || 'System', notes: 'Exchange return collected.' };
+                    const linkedUpdate = { status: ParcelStatus.PICKED_UP, updatedAt: new Date().toISOString(), history: [...linkedParcel.history, pickedUpHistoryEvent] };
+                    
+                    const { error: linkedError } = await supabase.from('parcels').update(keysToSnake(linkedUpdate)).eq('id', mainParcel.linkedParcelId);
+                    if (linkedError) return handleError(linkedError, 'updating linked exchange parcel');
+                    
+                    setParcels(prev => prev.map(p => p.id === mainParcel.linkedParcelId ? { ...p, ...linkedUpdate } : p));
                 }
-            } else {
-                const isNowDelivered = status === ParcelStatus.DELIVERED;
-                const updateData: Partial<Parcel> = {
-                    status,
-                    updatedAt: new Date().toISOString(),
-                    isCodReconciled: isNowDelivered ? false : mainParcel.isCodReconciled,
-                    deliveryZone: details?.deliveryZone || mainParcel.deliveryZone,
-                };
-                
-                if (details?.weight !== undefined) {
-                    updateData.weight = details.weight;
-                }
-                
-                const notes: string[] = [];
-                if (details?.reason) notes.push(`Reason: ${details.reason}`);
-                if (details?.deliveryZone) notes.push(`Assigned to Delivery Zone: ${details.deliveryZone}`);
-                if (details?.weight !== undefined && details.weight !== mainParcel.weight) {
-                    notes.push(`Weight updated from ${mainParcel.weight.toFixed(1)}kg to ${details.weight.toFixed(1)}kg.`);
-                }
-                
-                if (status === ParcelStatus.OUT_FOR_DELIVERY && details?.driverId) {
-                    updateData.deliveryDriverId = details.driverId;
-                    const driver = users.find(u => u.id === details.driverId);
-                    notes.push(`Dispatched and assigned to driver: ${driver?.name || 'Unknown'}.`);
-                }
-
-                const newHistoryEvent: ParcelHistoryEvent = {
-                    status: status,
-                    createdAt: new Date().toISOString(),
-                    updatedBy: currentUser?.name || 'System',
-                    notes: notes.join(' ') || undefined,
-                };
-
-                if (status === ParcelStatus.DELIVERY_FAILED) {
-                    updateData.failedAttemptReason = details?.reason;
-                    newHistoryEvent.proofOfAttempt = details?.proof;
-                } else {
-                    updateData.failedAttemptReason = undefined;
-                }
-
-
-                if ([ParcelStatus.PENDING_DELIVERY, ParcelStatus.DELIVERED, ParcelStatus.RETURNED].includes(status)) {
-                    updateData.deliveryDriverId = undefined;
-                }
-                
-                if (status === ParcelStatus.PENDING_RETURN) {
-                    const brand = users.find(u => u.id === mainParcel.brandId);
-                    const defaultPickupLocation = brand?.pickupLocations?.[0];
-                    updateData.pickupDriverId = defaultPickupLocation?.assignedDriverId;
-                    updateData.deliveryDriverId = undefined;
-                }
-
-
-                newParcels[mainParcelIndex] = { ...mainParcel, ...updateData, history: [...mainParcel.history, newHistoryEvent] };
             }
-            return newParcels;
-        });
-    }, [users]);
+        } else {
+            const isNowDelivered = status === ParcelStatus.DELIVERED;
+            const updateData: Partial<Parcel> = { status, updatedAt: new Date().toISOString(), isCodReconciled: isNowDelivered ? false : mainParcel.isCodReconciled, deliveryZone: details?.deliveryZone || mainParcel.deliveryZone };
+            
+            if (details?.weight !== undefined) updateData.weight = details.weight;
+            
+            const notes: string[] = [];
+            if (details?.reason) notes.push(`Reason: ${details.reason}`);
+            if (details?.deliveryZone) notes.push(`Assigned to Delivery Zone: ${details.deliveryZone}`);
+            if (details?.weight !== undefined && details.weight !== mainParcel.weight) notes.push(`Weight updated from ${mainParcel.weight.toFixed(1)}kg to ${details.weight.toFixed(1)}kg.`);
+            
+            if (status === ParcelStatus.OUT_FOR_DELIVERY && details?.driverId) {
+                updateData.deliveryDriverId = details.driverId;
+                const driver = users.find(u => u.id === details.driverId);
+                notes.push(`Dispatched and assigned to driver: ${driver?.name || 'Unknown'}.`);
+            }
+
+            const newHistoryEvent: ParcelHistoryEvent = { status: status, createdAt: new Date().toISOString(), updatedBy: currentUser?.name || 'System', notes: notes.join(' ') || undefined };
+
+            if (status === ParcelStatus.DELIVERY_FAILED) {
+                updateData.failedAttemptReason = details?.reason;
+                newHistoryEvent.proofOfAttempt = details?.proof;
+            } else { updateData.failedAttemptReason = undefined; }
+
+            if ([ParcelStatus.PENDING_DELIVERY, ParcelStatus.DELIVERED, ParcelStatus.RETURNED].includes(status)) updateData.deliveryDriverId = undefined;
+            
+            if (status === ParcelStatus.PENDING_RETURN) {
+                const brand = users.find(u => u.id === mainParcel.brandId);
+                const defaultPickupLocation = brand?.pickupLocations?.[0];
+                updateData.pickupDriverId = defaultPickupLocation?.assignedDriverId;
+                updateData.deliveryDriverId = undefined;
+            }
+
+            const finalUpdate = { ...mainParcel, ...updateData, history: [...mainParcel.history, newHistoryEvent] };
+            const { error } = await supabase.from('parcels').update(keysToSnake(finalUpdate)).eq('id', parcelId);
+
+            if (error) return handleError(error, 'updating parcel status');
+            setParcels(prev => prev.map(p => p.id === parcelId ? finalUpdate : p));
+        }
+    }, [parcels, users]);
     
     const updateMultipleParcelStatuses = useCallback(async (parcelIds: string[], status: ParcelStatus, currentUser: User, details?: { adminRemark?: string }) => {
-        setParcels(currentParcels => {
-            return currentParcels.map(p => {
-                if (parcelIds.includes(p.id)) {
-                    const newHistoryEvent: ParcelHistoryEvent = {
-                        status: status,
-                        createdAt: new Date().toISOString(),
-                        updatedBy: currentUser.name,
-                        notes: details?.adminRemark || `Status updated by ${currentUser.name}.`
-                    };
-                    
-                    const updatedParcel: Parcel = { 
-                        ...p, 
-                        status, 
-                        updatedAt: new Date().toISOString(),
-                        history: [...p.history, newHistoryEvent] 
-                    };
-                    
-                    return updatedParcel;
-                }
-                return p;
-            });
+        const updates: any[] = [];
+        const localUpdates: Parcel[] = [];
+
+        parcels.forEach(p => {
+            if (parcelIds.includes(p.id)) {
+                const newHistoryEvent: ParcelHistoryEvent = { status, createdAt: new Date().toISOString(), updatedBy: currentUser.name, notes: details?.adminRemark || `Status updated by ${currentUser.name}.` };
+                const updatedParcel: Parcel = { ...p, status, updatedAt: new Date().toISOString(), history: [...p.history, newHistoryEvent] };
+                updates.push(keysToSnake(updatedParcel));
+                localUpdates.push(updatedParcel);
+            }
         });
-    }, []);
+        
+        const { error } = await supabase.from('parcels').upsert(updates);
+        if (error) return console.error('Error batch updating parcels:', error);
+
+        setParcels(currentParcels => currentParcels.map(p => localUpdates.find(up => up.id === p.id) || p));
+    }, [parcels]);
 
     const bookNewParcel = useCallback(async (newParcelData: Omit<Parcel, 'id' | 'trackingNumber' | 'createdAt' | 'updatedAt' | 'status' | 'pickupDriverId' | 'deliveryDriverId' | 'deliveryCharge' | 'tax' | 'isCodReconciled' | 'invoiceId' | 'failedAttemptReason' | 'proofOfAttempt' | 'history' | 'returnItemDetails' | 'pickupAddress'> & { pickupLocationId: string }): Promise<Parcel | null> => {
         const brand = users.find(u => u.id === newParcelData.brandId);
         if (!brand) return null;
         
         const pickupLocation = brand.pickupLocations?.find(loc => loc.id === newParcelData.pickupLocationId);
-        if (!pickupLocation) {
-            console.error("Selected pickup location not found for the brand.");
-            return null;
-        }
+        if (!pickupLocation) return null;
 
-        // Calculate delivery charge based on brand's tier-based settings
         const weightKey = String(newParcelData.weight);
-        const chargeForWeight = brand?.weightCharges?.[weightKey] ?? 100; // Default to 100 if tier not found
+        const chargeForWeight = brand?.weightCharges?.[weightKey] ?? 100;
         const fuelSurchargePercent = brand?.fuelSurcharge ?? 10;
-        
         const fuelCharge = chargeForWeight * (fuelSurchargePercent / 100);
         const finalDeliveryCharge = chargeForWeight + fuelCharge;
         const tax = finalDeliveryCharge * 0.16;
-        
         const trackingNumber = `SD${Date.now().toString().slice(-6)}`;
         
         const parcelToAdd: Parcel = {
+            id: crypto.randomUUID(),
             ...newParcelData,
-            id: `p${Date.now()}`,
             trackingNumber,
             status: ParcelStatus.BOOKED,
             pickupDriverId: pickupLocation.assignedDriverId,
@@ -159,16 +203,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isCodReconciled: newParcelData.codAmount > 0 ? false : true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            history: [{
-                status: ParcelStatus.BOOKED,
-                createdAt: new Date().toISOString(),
-                updatedBy: newParcelData.brandName,
-                notes: `Parcel booked from: ${pickupLocation.address}`
-            }],
+            history: [{ status: ParcelStatus.BOOKED, createdAt: new Date().toISOString(), updatedBy: newParcelData.brandName, notes: `Parcel booked from: ${pickupLocation.address}` }],
         };
         
-        setParcels(prev => [...prev, parcelToAdd]);
-        return parcelToAdd;
+        const { data, error } = await supabase.from('parcels').insert(keysToSnake(parcelToAdd)).select().single();
+
+        if(error || !data) {
+             console.error('Error booking parcel:', error);
+             return null;
+        }
+
+        const newParcel = keysToCamel(data) as Parcel;
+        setParcels(prev => [...prev, newParcel]);
+        return newParcel;
     }, [users]);
     
     const initiateExchange = useCallback(async (originalParcelId: string, newOutboundDetails: { orderId: string; itemDetails: string; codAmount: number; deliveryInstructions?: string; }, returnItemDetails: Item[]): Promise<{ outboundParcel: Parcel; returnParcel: Parcel; } | null> => {
@@ -176,7 +223,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!originalParcel) return null;
 
         const brand = users.find(u => u.id === originalParcel.brandId);
-        // Use a default weight and find its charge for exchange parcels
         const defaultWeight = 1.0;
         const weightKey = String(defaultWeight);
         const chargeForWeight = brand?.weightCharges?.[weightKey] ?? 100;
@@ -184,311 +230,228 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const fuelCharge = chargeForWeight * (fuelSurchargePercent / 100);
         const deliveryCharge = chargeForWeight + fuelCharge;
         const tax = deliveryCharge * 0.16;
-
         const defaultPickupLocation = brand?.pickupLocations?.[0];
         
         const now = new Date().toISOString();
-        const outboundId = `p${Date.now()}`;
-        const returnId = `p${Date.now() + 1}`;
-        const sharedTrackingNumber = `SDEX${outboundId.slice(-6).toUpperCase()}`;
+        const sharedTrackingNumber = `SDEX${Date.now().toString().slice(-6).toUpperCase()}`;
 
-        const outboundParcel: Parcel = {
-            id: outboundId,
-            brandId: originalParcel.brandId, brandName: originalParcel.brandName, recipientName: originalParcel.recipientName,
-            recipientAddress: originalParcel.recipientAddress, recipientPhone: originalParcel.recipientPhone,
-            status: ParcelStatus.BOOKED, pickupDriverId: defaultPickupLocation?.assignedDriverId,
-            pickupAddress: defaultPickupLocation?.address,
-            deliveryDriverId: undefined,
-            weight: defaultWeight,
-            isCodReconciled: newOutboundDetails.codAmount > 0 ? false : true, createdAt: now, updatedAt: now,
-            isExchange: true, orderId: newOutboundDetails.orderId, itemDetails: newOutboundDetails.itemDetails,
-            codAmount: newOutboundDetails.codAmount, deliveryCharge, tax,
-            deliveryInstructions: newOutboundDetails.deliveryInstructions, linkedParcelId: returnId,
-            trackingNumber: sharedTrackingNumber,
-            history: [{
-                status: ParcelStatus.BOOKED,
-                createdAt: now,
-                updatedBy: originalParcel.brandName,
-                notes: `Outbound exchange parcel booked for order ${originalParcel.orderId}.`
-            }],
-        };
+        const outboundParcel: Parcel = { id: crypto.randomUUID(), brandId: originalParcel.brandId, brandName: originalParcel.brandName, recipientName: originalParcel.recipientName, recipientAddress: originalParcel.recipientAddress, recipientPhone: originalParcel.recipientPhone, status: ParcelStatus.BOOKED, pickupDriverId: defaultPickupLocation?.assignedDriverId, pickupAddress: defaultPickupLocation?.address, deliveryDriverId: undefined, weight: defaultWeight, isCodReconciled: newOutboundDetails.codAmount > 0 ? false : true, createdAt: now, updatedAt: now, isExchange: true, orderId: newOutboundDetails.orderId, itemDetails: newOutboundDetails.itemDetails, codAmount: newOutboundDetails.codAmount, deliveryCharge, tax, deliveryInstructions: newOutboundDetails.deliveryInstructions, trackingNumber: sharedTrackingNumber, history: [{ status: ParcelStatus.BOOKED, createdAt: now, updatedBy: originalParcel.brandName, notes: `Outbound exchange parcel booked for order ${originalParcel.orderId}.` }] };
+        const returnParcel: Parcel = { id: crypto.randomUUID(), orderId: `${originalParcel.orderId}-EX-RTN`, brandId: originalParcel.brandId, brandName: originalParcel.brandName, recipientName: originalParcel.recipientName, recipientAddress: originalParcel.recipientAddress, recipientPhone: originalParcel.recipientPhone, status: ParcelStatus.PENDING_EXCHANGE_PICKUP, pickupDriverId: undefined, deliveryDriverId: undefined, codAmount: 0, weight: 1.0, deliveryCharge: 0, tax: 0, createdAt: now, updatedAt: now, itemDetails: `Return items for order ${originalParcel.orderId}`, returnItemDetails: returnItemDetails, isCodReconciled: true, isExchange: true, trackingNumber: sharedTrackingNumber, history: [{ status: ParcelStatus.PENDING_EXCHANGE_PICKUP, createdAt: now, updatedBy: originalParcel.brandName, notes: `Return parcel created for exchange against order ${originalParcel.orderId}.` }]};
 
-        const returnParcel: Parcel = {
-            id: returnId,
-            orderId: `${originalParcel.orderId}-EX-RTN`, brandId: originalParcel.brandId, brandName: originalParcel.brandName, 
-            recipientName: originalParcel.recipientName, recipientAddress: originalParcel.recipientAddress, recipientPhone: originalParcel.recipientPhone,
-            status: ParcelStatus.PENDING_EXCHANGE_PICKUP, pickupDriverId: undefined,
-            deliveryDriverId: undefined,
-            codAmount: 0, weight: 1.0, deliveryCharge: 0, tax: 0, createdAt: now, updatedAt: now,
-            itemDetails: `Return items for order ${originalParcel.orderId}`, 
-            returnItemDetails: returnItemDetails,
-            isCodReconciled: true, isExchange: true, linkedParcelId: outboundId,
-            trackingNumber: sharedTrackingNumber, // Use the same tracking number
-            history: [{
-                status: ParcelStatus.PENDING_EXCHANGE_PICKUP,
-                createdAt: now,
-                updatedBy: originalParcel.brandName,
-                notes: `Return parcel created for exchange against order ${originalParcel.orderId}.`
-            }],
-        };
+        const { data: insertedParcels, error } = await supabase.from('parcels').insert([keysToSnake(outboundParcel), keysToSnake(returnParcel)]).select();
         
-        setParcels(prev => [...prev, outboundParcel, returnParcel]);
-        return { outboundParcel, returnParcel };
+        if (error || !insertedParcels || insertedParcels.length !== 2) {
+            console.error('Error initiating exchange:', error);
+            return null;
+        }
+
+        const [newOutbound, newReturn] = keysToCamel(insertedParcels) as Parcel[];
+        // Link them up
+        const { error: linkError } = await supabase.from('parcels').upsert([
+            { id: newOutbound.id, linked_parcel_id: newReturn.id },
+            { id: newReturn.id, linked_parcel_id: newOutbound.id }
+        ]);
+
+        if (linkError) { console.error('Error linking exchange parcels:', linkError); /* Might need to delete them here */ return null; }
+
+        newOutbound.linkedParcelId = newReturn.id;
+        newReturn.linkedParcelId = newOutbound.id;
+
+        setParcels(prev => [...prev, newOutbound, newReturn]);
+        return { outboundParcel: newOutbound, returnParcel: newReturn };
     }, [parcels, users]);
 
     const reassignDriverJobs = useCallback(async (fromDriverId: string, toDriverId: string, currentUser: User, jobType: 'pickup' | 'delivery') => {
-        setParcels(currentParcels => {
-            const fromDriver = users.find(u => u.id === fromDriverId);
-            const toDriver = users.find(u => u.id === toDriverId);
-            if (!fromDriver || !toDriver) return currentParcels;
+        const fromDriver = users.find(u => u.id === fromDriverId);
+        const toDriver = users.find(u => u.id === toDriverId);
+        if (!fromDriver || !toDriver) return;
 
-            const activePickupStatuses = [ParcelStatus.BOOKED, ParcelStatus.OUT_FOR_RETURN];
-            const activeDeliveryStatuses = [ParcelStatus.OUT_FOR_DELIVERY, ParcelStatus.DELIVERY_FAILED, ParcelStatus.CUSTOMER_REFUSED, ParcelStatus.PENDING_DELIVERY];
+        const activePickupStatuses = [ParcelStatus.BOOKED, ParcelStatus.OUT_FOR_RETURN];
+        const activeDeliveryStatuses = [ParcelStatus.OUT_FOR_DELIVERY, ParcelStatus.DELIVERY_FAILED, ParcelStatus.CUSTOMER_REFUSED, ParcelStatus.PENDING_DELIVERY];
 
-            return currentParcels.map(p => {
-                let updatedParcel = { ...p };
-                let wasReassigned = false;
-                let historyNote = '';
-
-                if (jobType === 'pickup' && p.pickupDriverId === fromDriverId && activePickupStatuses.includes(p.status)) {
-                    updatedParcel.pickupDriverId = toDriverId;
-                    wasReassigned = true;
-                    historyNote = `Pickup job reassigned from ${fromDriver.name} to ${toDriver.name} by admin.`;
-                }
-                
-                if (jobType === 'delivery' && p.deliveryDriverId === fromDriverId && activeDeliveryStatuses.includes(p.status)) {
-                    updatedParcel.deliveryDriverId = toDriverId;
-                    wasReassigned = true;
-                    historyNote = `Delivery job reassigned from ${fromDriver.name} to ${toDriver.name} by admin.`;
-                }
-
-                if (wasReassigned) {
-                    const newHistoryEvent: ParcelHistoryEvent = {
-                        status: p.status,
-                        createdAt: new Date().toISOString(),
-                        updatedBy: currentUser.name,
-                        notes: historyNote
-                    };
-                    updatedParcel.history = [...p.history, newHistoryEvent];
-                    updatedParcel.updatedAt = new Date().toISOString();
-                }
-
-                return updatedParcel;
-            });
+        const parcelsToUpdate = parcels.filter(p => {
+            return (jobType === 'pickup' && p.pickupDriverId === fromDriverId && activePickupStatuses.includes(p.status)) ||
+                   (jobType === 'delivery' && p.deliveryDriverId === fromDriverId && activeDeliveryStatuses.includes(p.status));
         });
-    }, [users]);
+
+        if (parcelsToUpdate.length === 0) return;
+
+        const historyNote = `${jobType.charAt(0).toUpperCase() + jobType.slice(1)} job reassigned from ${fromDriver.name} to ${toDriver.name} by admin.`;
+        const newHistoryEvent: ParcelHistoryEvent = { status: parcelsToUpdate[0].status, createdAt: new Date().toISOString(), updatedBy: currentUser.name, notes: historyNote };
+        
+        const updates = parcelsToUpdate.map(p => ({
+            id: p.id,
+            [jobType === 'pickup' ? 'pickup_driver_id' : 'delivery_driver_id']: toDriverId,
+            history: [...p.history, newHistoryEvent],
+            updated_at: new Date().toISOString(),
+        }));
+        
+        const { error } = await supabase.from('parcels').upsert(updates);
+        if (error) return console.error('Error reassigning jobs:', error);
+
+        setParcels(prev => prev.map(p => {
+            const updated = parcelsToUpdate.find(u => u.id === p.id);
+            if (updated) {
+                return { ...p, [jobType === 'pickup' ? 'pickupDriverId' : 'deliveryDriverId']: toDriverId, history: [...p.history, newHistoryEvent], updatedAt: new Date().toISOString() };
+            }
+            return p;
+        }));
+    }, [parcels, users]);
 
     const addNewBrand = useCallback(async (brandData: Omit<User, 'id' | 'role' | 'status'>) => {
-        const newBrand: User = { ...brandData, id: `brand-${Date.now()}`, role: UserRole.BRAND, status: 'ACTIVE' };
-        setUsers(prev => [...prev, newBrand]);
+        const newBrand: User = { id: crypto.randomUUID(), ...brandData, role: UserRole.BRAND, status: 'ACTIVE' };
+        const { data, error } = await supabase.from('users').insert(keysToSnake(newBrand)).select().single();
+        if (error || !data) return console.error('Error adding new brand:', error);
+        setUsers(prev => [...prev, keysToCamel(data)]);
     }, []);
 
     const updateBrand = useCallback(async (brandId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
-        const cleanData: any = { ...updatedData };
-        // Clean up unassigned drivers from pickup locations before saving
-        if (cleanData.pickupLocations) {
-            cleanData.pickupLocations = cleanData.pickupLocations.map((loc: any) => {
-                if (loc.assignedDriverId === 'unassigned') {
-                    return { ...loc, assignedDriverId: undefined };
-                }
-                return loc;
-            });
+        if (updatedData.pickupLocations) {
+            updatedData.pickupLocations = updatedData.pickupLocations.map((loc: any) => ({ ...loc, assignedDriverId: loc.assignedDriverId === 'unassigned' ? undefined : loc.assignedDriverId }));
         }
-        setUsers(prev => prev.map(u => u.id === brandId ? { ...u, ...cleanData } : u));
+        const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', brandId).select().single();
+        if (error || !data) return console.error('Error updating brand:', error);
+        setUsers(prev => prev.map(u => u.id === brandId ? keysToCamel(data) : u));
     }, []);
     
     const addNewDriver = useCallback(async (driverData: Omit<User, 'id' | 'role' | 'status'>) => {
-        const newDriver: User = { ...driverData, id: `driver-${Date.now()}`, role: UserRole.DRIVER, status: 'ACTIVE', dutyLog: [] };
-        setUsers(prev => [...prev, newDriver]);
+        const newDriver: User = { id: crypto.randomUUID(), ...driverData, role: UserRole.DRIVER, status: 'ACTIVE', dutyLog: [] };
+        const { data, error } = await supabase.from('users').insert(keysToSnake(newDriver)).select().single();
+        if (error || !data) return console.error('Error adding driver:', error);
+        setUsers(prev => [...prev, keysToCamel(data)]);
     }, []);
 
     const updateDriver = useCallback(async (driverId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
-        setUsers(prev => prev.map(u => u.id === driverId ? { ...u, ...updatedData } : u));
+        const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', driverId).select().single();
+        if (error || !data) return console.error('Error updating driver:', error);
+        setUsers(prev => prev.map(u => u.id === driverId ? keysToCamel(data) : u));
     }, []);
     
     const addNewSalesManager = useCallback(async (managerData: Omit<User, 'id' | 'role' | 'status'>) => {
-        const newManager: User = { ...managerData, id: `sm-${Date.now()}`, role: UserRole.SALES_MANAGER, status: 'ACTIVE' };
-        setUsers(prev => [...prev, newManager]);
+        const newManager: User = { id: crypto.randomUUID(), ...managerData, role: UserRole.SALES_MANAGER, status: 'ACTIVE' };
+        const { data, error } = await supabase.from('users').insert(keysToSnake(newManager)).select().single();
+        if(error || !data) return console.error('Error adding sales manager:', error);
+        setUsers(prev => [...prev, keysToCamel(data)]);
     }, []);
 
     const updateSalesManager = useCallback(async (managerId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
-        setUsers(prev => prev.map(u => u.id === managerId ? { ...u, ...updatedData } : u));
+        const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', managerId).select().single();
+        if(error || !data) return console.error('Error updating sales manager:', error);
+        setUsers(prev => prev.map(u => u.id === managerId ? keysToCamel(data) : u));
     }, []);
 
     const addNewDirectSales = useCallback(async (salesData: Omit<User, 'id' | 'role' | 'status'>) => {
-        const newSales: User = { ...salesData, id: `ds-${Date.now()}`, role: UserRole.DIRECT_SALES, status: 'ACTIVE' };
-        setUsers(prev => [...prev, newSales]);
+        const newSales: User = { id: crypto.randomUUID(), ...salesData, role: UserRole.DIRECT_SALES, status: 'ACTIVE' };
+        const { data, error } = await supabase.from('users').insert(keysToSnake(newSales)).select().single();
+        if(error || !data) return console.error('Error adding direct sales:', error);
+        setUsers(prev => [...prev, keysToCamel(data)]);
     }, []);
 
     const updateDirectSales = useCallback(async (salesId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
-        setUsers(prev => prev.map(u => u.id === salesId ? { ...u, ...updatedData } : u));
+        const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', salesId).select().single();
+        if(error || !data) return console.error('Error updating direct sales:', error);
+        setUsers(prev => prev.map(u => u.id === salesId ? keysToCamel(data) : u));
     }, []);
 
     const toggleUserStatus = useCallback(async (userId: string) => {
         const user = users.find(u => u.id === userId);
         if (!user) return;
-
         const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-        
-        setUsers(prevUsers =>
-            prevUsers.map(u => (u.id === userId ? { ...u, status: newStatus } : u))
-        );
-
-        // If deactivating a driver, unassign their active parcels
-        if (user.role === UserRole.DRIVER && newStatus === 'INACTIVE') {
-            setParcels(prevParcels =>
-                prevParcels.map(p => {
-                    const newP = { ...p };
-                    let updated = false;
-                    if (p.pickupDriverId === userId && [ParcelStatus.BOOKED, ParcelStatus.OUT_FOR_RETURN].includes(p.status)) {
-                        newP.pickupDriverId = undefined;
-                        updated = true;
-                    }
-                    if (p.deliveryDriverId === userId && [ParcelStatus.OUT_FOR_DELIVERY, ParcelStatus.PENDING_DELIVERY, ParcelStatus.DELIVERY_FAILED, ParcelStatus.CUSTOMER_REFUSED].includes(p.status)) {
-                        newP.deliveryDriverId = undefined;
-                        newP.status = ParcelStatus.AT_HUB;
-                        updated = true;
-                    }
-                    if (updated) {
-                         newP.history = [...p.history, {
-                            status: newP.status,
-                            createdAt: new Date().toISOString(),
-                            updatedBy: 'System',
-                            notes: `Driver ${user.name} deactivated, parcel unassigned.`
-                        }];
-                    }
-                    return updated ? newP : p;
-                })
-            );
-        }
+        const { data, error } = await supabase.from('users').update({ status: newStatus }).eq('id', userId).select().single();
+        if (error || !data) return console.error('Error toggling user status:', error);
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
     }, [users]);
 
     const toggleDriverDutyStatus = useCallback(async (driverId: string) => {
-        setUsers(prevUsers => prevUsers.map(user => {
-            if (user.id === driverId && user.role === UserRole.DRIVER) {
-                const newOnDutyStatus = !user.onDuty;
-                const newLogEntry: DutyLogEvent = {
-                    status: newOnDutyStatus ? 'ON_DUTY' : 'OFF_DUTY',
-                    timestamp: new Date().toISOString()
-                };
-                const newDutyLog = [...(user.dutyLog || []), newLogEntry];
-                return { ...user, onDuty: newOnDutyStatus, dutyLog: newDutyLog };
-            }
-            return user;
-        }));
-    }, []);
+        const user = users.find(u => u.id === driverId);
+        if (!user || user.role !== UserRole.DRIVER) return;
+        const newOnDutyStatus = !user.onDuty;
+        const newLogEntry: DutyLogEvent = { status: newOnDutyStatus ? 'ON_DUTY' : 'OFF_DUTY', timestamp: new Date().toISOString() };
+        const newDutyLog = [...(user.dutyLog || []), newLogEntry];
+        const { data, error } = await supabase.from('users').update({ on_duty: newOnDutyStatus, duty_log: newDutyLog }).eq('id', driverId).select().single();
+        if (error || !data) return console.error('Error toggling duty status:', error);
+        setUsers(prev => prev.map(u => u.id === driverId ? keysToCamel(data) : u));
+    }, [users]);
     
     const deleteParcel = useCallback(async (parcelIds: string[]) => {
-        setParcels(prev => prev.map(p => {
-            if (parcelIds.includes(p.id) && p.status === ParcelStatus.BOOKED) {
-                return { ...p, status: ParcelStatus.CANCELED, updatedAt: new Date().toISOString() };
-            }
-            return p;
-        }));
+        // This is a soft delete, updating status to Canceled
+        const updates = parcelIds.map(id => ({ id, status: ParcelStatus.CANCELED, updated_at: new Date().toISOString() }));
+        const { error } = await supabase.from('parcels').upsert(updates);
+        if (error) return console.error('Error canceling parcels:', error);
+        setParcels(prev => prev.map(p => parcelIds.includes(p.id) ? { ...p, status: ParcelStatus.CANCELED, updatedAt: new Date().toISOString() } : p));
     }, []);
 
     const generateInvoiceForPayout = useCallback(async (brandId: string, parcelIds: string[]) => {
         const brand = users.find(u => u.id === brandId);
         if (!brand) return;
-
         const parcelsToInvoice = parcels.filter(p => parcelIds.includes(p.id));
         const totalCOD = parcelsToInvoice.reduce((sum, p) => sum + p.codAmount, 0);
         const totalCharges = parcelsToInvoice.reduce((sum, p) => sum + p.deliveryCharge, 0);
         const totalTax = parcelsToInvoice.reduce((sum, p) => sum + p.tax, 0);
 
-        const newInvoice: Invoice = {
-          id: `inv-${Date.now()}`,
-          brandId: brand.id, brandName: brand.name, generatedAt: new Date().toISOString(),
-          parcelIds, totalCOD, totalCharges, totalTax, netPayout: totalCOD - totalCharges - totalTax, status: 'PENDING',
-        };
+        const newInvoiceData: Invoice = { id: crypto.randomUUID(), brandId: brand.id, brandName: brand.name, generatedAt: new Date().toISOString(), parcelIds, totalCOD, totalCharges, totalTax, netPayout: totalCOD - totalCharges - totalTax, status: 'PENDING' };
         
-        setInvoices(prev => [...prev, newInvoice]);
+        const { data: newInvoice, error: invoiceError } = await supabase.from('invoices').insert(keysToSnake(newInvoiceData)).select().single();
+        if(invoiceError || !newInvoice) return console.error('Error generating invoice:', invoiceError);
+
+        const { error: parcelUpdateError } = await supabase.from('parcels').update({ invoice_id: newInvoice.id }).in('id', parcelIds);
+        if(parcelUpdateError) return console.error('Error updating parcels with invoice ID:', parcelUpdateError);
+
+        setInvoices(prev => [...prev, keysToCamel(newInvoice)]);
         setParcels(prev => prev.map(p => parcelIds.includes(p.id) ? { ...p, invoiceId: newInvoice.id } : p));
     }, [users, parcels]);
 
     const markInvoiceAsPaid = useCallback(async (invoiceId: string, transactionId: string) => {
-        setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status: 'PAID', transactionId, paidAt: new Date().toISOString() } : inv));
+        const update = { status: 'PAID', transaction_id: transactionId, paid_at: new Date().toISOString() };
+        const { data, error } = await supabase.from('invoices').update(update).eq('id', invoiceId).select().single();
+        if(error || !data) return console.error('Error marking invoice as paid:', error);
+        setInvoices(prev => prev.map(inv => inv.id === invoiceId ? keysToCamel(data) : inv));
     }, []);
 
     const reconcileDriverCod = useCallback(async (driverId: string, parcelIds: string[], details: ReconciliationDetails) => {
-        let notes = `COD Reconciled. Method: ${details.method}.`;
-        if (details.method === 'Mixed' || details.method === 'Cash') {
-            notes += `\nCash Amount: PKR ${details.cashAmount?.toLocaleString()}`;
-        }
-        if (details.method === 'Mixed' || details.method === 'Online') {
-            details.transfers?.forEach(t => {
-                notes += `\nOnline Transfer: PKR ${t.amount.toLocaleString()}`;
-                if (t.transactionId) {
-                    notes += ` (Ref: ${t.transactionId})`;
-                }
-            });
-        }
+        const parcelsToUpdate = parcels.filter(p => parcelIds.includes(p.id));
+        const historyNote = `COD Reconciled. Method: ${details.method}.`; // Simplified for DB update
+        const newHistoryEvent = { status: ParcelStatus.DELIVERED, createdAt: new Date().toISOString(), updatedBy: 'Admin', notes: historyNote };
+        const updates = parcelsToUpdate.map(p => ({ id: p.id, is_cod_reconciled: true, history: [...p.history, newHistoryEvent] }));
+        
+        const { error } = await supabase.from('parcels').upsert(keysToSnake(updates));
+        if (error) return console.error('Error reconciling COD:', error);
 
         setParcels(prev => prev.map(p => {
-            if (parcelIds.includes(p.id)) {
-                const newHistoryEvent: ParcelHistoryEvent = {
-                    status: p.status, // Keep current status, just add a note
-                    createdAt: new Date().toISOString(),
-                    updatedBy: 'Admin', // Assume admin is reconciling
-                    notes: notes
-                };
-                return { ...p, isCodReconciled: true, history: [...p.history, newHistoryEvent] };
-            }
+            if (parcelIds.includes(p.id)) return { ...p, isCodReconciled: true, history: [...p.history, newHistoryEvent] };
             return p;
         }));
-    }, []);
+    }, [parcels]);
 
-    const markSalaryAsPaid = useCallback(async (paymentData: Omit<SalaryPayment, 'id' | 'status' | 'paidAt'>) => {
-        setSalaryPayments(prev => {
-            const existingIndex = prev.findIndex(p => 
-                p.userId === paymentData.userId && 
-                p.periodStartDate === paymentData.periodStartDate && 
-                p.periodEndDate === paymentData.periodEndDate
-            );
-
-            if (existingIndex > -1) {
-                // This case should ideally not happen if UI only allows paying unpaid salaries, but it's safe to handle.
-                const updatedPayments = [...prev];
-                updatedPayments[existingIndex] = {
-                    ...updatedPayments[existingIndex],
-                    ...paymentData,
-                    status: 'PAID',
-                    paidAt: new Date().toISOString(),
-                };
-                return updatedPayments;
-            } else {
-                const newPayment: SalaryPayment = {
-                    ...paymentData,
-                    id: `sal-${Date.now()}`,
-                    status: 'PAID',
-                    paidAt: new Date().toISOString(),
-                };
-                return [...prev, newPayment];
-            }
-        });
+    const markSalaryAsPaid = useCallback(async (paymentData: Omit<SalaryPayment, 'id' | 'status' | 'paidAt'> & { transactionId: string }) => {
+        const newPayment: SalaryPayment = { id: crypto.randomUUID(), ...paymentData, status: 'PAID', paidAt: new Date().toISOString() };
+        const { data, error } = await supabase.from('salary_payments').insert(keysToSnake(newPayment)).select().single();
+        if(error || !data) return console.error('Error marking salary as paid:', error);
+        setSalaryPayments(prev => [...prev, keysToCamel(data)]);
     }, []);
 
     const addBrandRemark = useCallback(async (parcelId: string, remark: string) => {
-        setParcels(prev => prev.map(p => p.id === parcelId ? { ...p, brandRemark: remark, updatedAt: new Date().toISOString() } : p));
+        const { data, error } = await supabase.from('parcels').update({ brand_remark: remark, updated_at: new Date().toISOString() }).eq('id', parcelId).select().single();
+        if(error || !data) return console.error('Error adding brand remark:', error);
+        setParcels(prev => prev.map(p => p.id === parcelId ? keysToCamel(data) : p));
     }, []);
     
     const addShipperAdvice = useCallback(async (parcelId: string, advice: string) => {
-        setParcels(prev => prev.map(p => p.id === parcelId ? { ...p, shipperAdvice: advice, updatedAt: new Date().toISOString() } : p));
+        const { data, error } = await supabase.from('parcels').update({ shipper_advice: advice, updated_at: new Date().toISOString() }).eq('id', parcelId).select().single();
+        if(error || !data) return console.error('Error adding shipper advice:', error);
+        setParcels(prev => prev.map(p => p.id === parcelId ? keysToCamel(data) : p));
     }, []);
 
     const manuallyAssignDriver = useCallback(async (parcelId: string, driverId: string | null, type: 'pickup' | 'delivery') => {
-        setParcels(prev => prev.map(p => {
-            if (p.id === parcelId) {
-                const update: Partial<Parcel> = { updatedAt: new Date().toISOString() };
-                if (type === 'pickup') update.pickupDriverId = driverId || undefined;
-                else update.deliveryDriverId = driverId || undefined;
-                return { ...p, ...update };
-            }
-            return p;
-        }));
+        const key = type === 'pickup' ? 'pickup_driver_id' : 'delivery_driver_id';
+        const { data, error } = await supabase.from('parcels').update({ [key]: driverId || null, updated_at: new Date().toISOString() }).eq('id', parcelId).select().single();
+        if (error || !data) return console.error('Error manually assigning driver:', error);
+        setParcels(prev => prev.map(p => p.id === parcelId ? keysToCamel(data) : p));
     }, []);
 
     const updateDriverLocation = useCallback(async (driverId: string, location: { lat: number, lng: number }) => {
+        const { error } = await supabase.from('users').update({ current_location: location }).eq('id', driverId);
+        if (error) return console.error('Error updating driver location:', error);
         setUsers(prev => prev.map(u => u.id === driverId ? { ...u, currentLocation: location } : u));
     }, []);
 
