@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { Parcel, User, ParcelStatus, UserRole, Invoice, DataContextType, ParcelHistoryEvent, ReconciliationDetails, DutyLogEvent, Item, SalaryPayment } from '../types';
 import { supabase } from '../supabase';
@@ -56,25 +57,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 ]);
 
                 if (parcelsRes.error) {
-                    console.error("Error fetching parcels:", parcelsRes.error);
+                    console.error("Error fetching parcels:", parcelsRes.error.message);
                 } else {
                     setParcels(keysToCamel(parcelsRes.data || []));
                 }
     
                 if (usersRes.error) {
-                    console.error("Error fetching users:", usersRes.error);
+                    console.error("Error fetching users:", usersRes.error.message);
                 } else {
                     setUsers(keysToCamel(usersRes.data || []));
                 }
     
                 if (invoicesRes.error) {
-                    console.error("Error fetching invoices:", invoicesRes.error);
+                    console.error("Error fetching invoices:", invoicesRes.error.message);
                 } else {
                     setInvoices(keysToCamel(invoicesRes.data || []));
                 }
     
                 if (salaryPaymentsRes.error) {
-                    console.error("Error fetching salary payments:", salaryPaymentsRes.error);
+                    console.error("Error fetching salary payments:", salaryPaymentsRes.error.message);
                 } else {
                     setSalaryPayments(keysToCamel(salaryPaymentsRes.data || []));
                 }
@@ -298,11 +299,39 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
     }, [parcels, users]);
 
-    const addNewBrand = useCallback(async (brandData: Omit<User, 'id' | 'role' | 'status'>) => {
-        const newBrand: User = { id: crypto.randomUUID(), ...brandData, role: UserRole.BRAND, status: 'ACTIVE' };
-        const { data, error } = await supabase.from('users').insert(keysToSnake(newBrand)).select().single();
-        if (error || !data) return console.error('Error adding new brand:', error);
-        setUsers(prev => [...prev, keysToCamel(data)]);
+    const createUserWithProfile = async (email: string, password: string, role: UserRole, profileData: Omit<User, 'id' | 'role' | 'status' | 'email'>): Promise<User | null> => {
+        // First, create the authenticated user
+        const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+        if (authError || !authData.user) {
+            console.error(`Error creating auth user for ${role}:`, authError?.message);
+            alert(`Failed to create user: ${authError?.message}`);
+            return null;
+        }
+
+        // Then, create the user profile in the public 'users' table
+        const newUserProfile: User = {
+            id: authData.user.id,
+            ...profileData,
+            email,
+            role,
+            status: 'ACTIVE',
+        };
+
+        const { data: profile, error: profileError } = await supabase.from('users').insert(keysToSnake(newUserProfile)).select().single();
+        if (profileError || !profile) {
+            console.error(`Error creating profile for ${role}:`, profileError?.message);
+            // Consider deleting the auth user here for cleanup
+            alert(`User account was created, but failed to save profile. Please contact support.`);
+            return null;
+        }
+        
+        const newUser = keysToCamel(profile) as User;
+        setUsers(prev => [...prev, newUser]);
+        return newUser;
+    };
+
+    const addNewBrand = useCallback(async (brandData: any) => {
+        await createUserWithProfile(brandData.email, brandData.password, UserRole.BRAND, brandData);
     }, []);
 
     const updateBrand = useCallback(async (brandId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
@@ -314,11 +343,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUsers(prev => prev.map(u => u.id === brandId ? keysToCamel(data) : u));
     }, []);
     
-    const addNewDriver = useCallback(async (driverData: Omit<User, 'id' | 'role' | 'status'>) => {
-        const newDriver: User = { id: crypto.randomUUID(), ...driverData, role: UserRole.DRIVER, status: 'ACTIVE', dutyLog: [] };
-        const { data, error } = await supabase.from('users').insert(keysToSnake(newDriver)).select().single();
-        if (error || !data) return console.error('Error adding driver:', error);
-        setUsers(prev => [...prev, keysToCamel(data)]);
+    const addNewDriver = useCallback(async (driverData: any) => {
+        await createUserWithProfile(driverData.email, driverData.password, UserRole.DRIVER, driverData);
     }, []);
 
     const updateDriver = useCallback(async (driverId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
@@ -327,11 +353,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUsers(prev => prev.map(u => u.id === driverId ? keysToCamel(data) : u));
     }, []);
     
-    const addNewSalesManager = useCallback(async (managerData: Omit<User, 'id' | 'role' | 'status'>) => {
-        const newManager: User = { id: crypto.randomUUID(), ...managerData, role: UserRole.SALES_MANAGER, status: 'ACTIVE' };
-        const { data, error } = await supabase.from('users').insert(keysToSnake(newManager)).select().single();
-        if(error || !data) return console.error('Error adding sales manager:', error);
-        setUsers(prev => [...prev, keysToCamel(data)]);
+    const addNewSalesManager = useCallback(async (managerData: any) => {
+        await createUserWithProfile(managerData.email, managerData.password, UserRole.SALES_MANAGER, managerData);
     }, []);
 
     const updateSalesManager = useCallback(async (managerId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
@@ -340,11 +363,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUsers(prev => prev.map(u => u.id === managerId ? keysToCamel(data) : u));
     }, []);
 
-    const addNewDirectSales = useCallback(async (salesData: Omit<User, 'id' | 'role' | 'status'>) => {
-        const newSales: User = { id: crypto.randomUUID(), ...salesData, role: UserRole.DIRECT_SALES, status: 'ACTIVE' };
-        const { data, error } = await supabase.from('users').insert(keysToSnake(newSales)).select().single();
-        if(error || !data) return console.error('Error adding direct sales:', error);
-        setUsers(prev => [...prev, keysToCamel(data)]);
+    const addNewDirectSales = useCallback(async (salesData: any) => {
+        await createUserWithProfile(salesData.email, salesData.password, UserRole.DIRECT_SALES, salesData);
     }, []);
 
     const updateDirectSales = useCallback(async (salesId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {

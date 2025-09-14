@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../../../context/DataContext';
 import { User, UserRole, Parcel, ParcelStatus } from '../../../types';
@@ -127,7 +128,7 @@ interface DriversTabProps {
 }
 
 const initialFormState = {
-    name: '', phone: '', deliveryZones: [] as string[],
+    name: '', phone: '', email: '', password: '', deliveryZones: [] as string[],
     photoUrl: '', whatsappNumber: '', currentAddress: '',
     permanentAddress: '', guardianContact: '', idCardNumber: ''
 };
@@ -159,6 +160,8 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
             setDriverFormData({ 
                 name: editingDriver.name, 
                 phone: editingDriver.phone || '', 
+                email: editingDriver.email || '',
+                password: '', // Never pre-fill password
                 deliveryZones: editingDriver.deliveryZones || [],
                 photoUrl: editingDriver.photoUrl || '',
                 whatsappNumber: editingDriver.whatsappNumber || '',
@@ -200,11 +203,11 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
     const handleDriverFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingDriver) {
-            if (driverFormData.name) updateDriver(editingDriver.id, driverFormData);
+            const { password, ...updateData } = driverFormData;
+            if (updateData.name) updateDriver(editingDriver.id, updateData);
         } else {
-            if (driverFormData.name) {
-                const email = `${driverFormData.name.toLowerCase().replace(/\s+/g, '.')}.${Date.now()}@send.pk`;
-                addNewDriver({ ...driverFormData, email });
+            if (driverFormData.name && driverFormData.email && driverFormData.password) {
+                addNewDriver(driverFormData);
             }
         }
         setIsDriverModalOpen(false);
@@ -336,11 +339,17 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                                     <div className="md:col-span-2 space-y-2">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             <div><FormLabel htmlFor="d_name">Driver Name</FormLabel><FormInput id="d_name" name="name" value={driverFormData.name} onChange={handleDriverFormInputChange} required /></div>
+                                            <div><FormLabel htmlFor="d_email">Email (for login)</FormLabel><FormInput id="d_email" name="email" type="email" value={driverFormData.email} onChange={handleDriverFormInputChange} required disabled={!!editingDriver} /></div>
+                                        </div>
+                                        {!editingDriver && (
+                                            <div><FormLabel htmlFor="d_password">Password</FormLabel><FormInput id="d_password" name="password" type="password" value={driverFormData.password} onChange={handleDriverFormInputChange} required /></div>
+                                        )}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             <div><FormLabel htmlFor="d_phone">Phone Number</FormLabel><FormInput id="d_phone" name="phone" value={driverFormData.phone} onChange={handleDriverFormInputChange} /></div>
                                             <div><FormLabel htmlFor="d_whatsapp">WhatsApp Number</FormLabel><FormInput id="d_whatsapp" name="whatsappNumber" value={driverFormData.whatsappNumber || ''} onChange={handleDriverFormInputChange} /></div>
                                             <div><FormLabel htmlFor="d_cnic">ID Card (CNIC)</FormLabel><FormInput id="d_cnic" name="idCardNumber" value={driverFormData.idCardNumber || ''} onChange={handleDriverFormInputChange} /></div>
+                                            <div><FormLabel htmlFor="d_guardian">Guardian Contact</FormLabel><FormInput id="d_guardian" name="guardianContact" value={driverFormData.guardianContact || ''} onChange={handleDriverFormInputChange} /></div>
                                         </div>
-                                        <div><FormLabel htmlFor="d_guardian">Guardian Contact</FormLabel><FormInput id="d_guardian" name="guardianContact" value={driverFormData.guardianContact || ''} onChange={handleDriverFormInputChange} /></div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

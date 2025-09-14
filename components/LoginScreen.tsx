@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card } from './shared/Card';
 import { Button } from './shared/Button';
@@ -8,16 +9,22 @@ import { User, UserRole, Parcel } from '../types';
 import { SearchIcon } from './icons/SearchIcon';
 import { Modal } from './shared/Modal';
 import { UserIcon } from './icons/UserIcon';
+import { supabase } from '../supabase';
 
 interface LoginScreenProps {
   onLogin: (user: User, parcel?: Parcel) => void;
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-    const { parcels, users } = useData();
+    const { parcels } = useData();
     const [trackingNumber, setTrackingNumber] = useState('');
     const [error, setError] = useState('');
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [loginError, setLoginError] = useState('');
+
 
     const handleTrack = (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,10 +37,26 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         }
     };
     
-    const admins = users.filter(u => u.role === UserRole.ADMIN || u.role === UserRole.WAREHOUSE_MANAGER);
-    const brands = users.filter(u => u.role === UserRole.BRAND);
-    const drivers = users.filter(u => u.role === UserRole.DRIVER);
-
+    const handleEmailLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setLoginError('');
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+            if (error) throw error;
+            // On successful login, the onAuthStateChange listener in App.tsx will handle the rest.
+            // No need to call onLogin here.
+            setIsLoginModalOpen(false);
+        } catch (error: any) {
+            setLoginError(error.message || 'An unexpected error occurred.');
+        } finally {
+            setLoading(false);
+        }
+    };
+    
     return (
         <div className="min-h-screen bg-background text-content-primary flex flex-col">
             <header className="py-4 px-4 sm:px-6 md:px-12 flex justify-between items-center border-b border-border shadow-sm sticky top-0 bg-background/80 backdrop-blur-sm z-50">
@@ -98,39 +121,41 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 </p>
             </footer>
             
-            <Modal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} title="Select a Portal to Login" size="lg">
-                <div className="space-y-3 p-1">
+            <Modal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} title="Portal Login" size="md">
+                <form onSubmit={handleEmailLogin} className="space-y-4 p-1">
                     <div>
-                        <h3 className="font-bold text-base mb-2 text-content-primary">Admin / Warehouse</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {admins.map(user => (
-                                <Button key={user.id} variant="secondary" size="lg" className="w-full justify-start" onClick={() => onLogin(user)}>
-                                    {user.name} <span className="text-xs text-content-muted ml-1">({user.role === UserRole.ADMIN ? 'Admin' : 'Warehouse'})</span>
-                                </Button>
-                            ))}
-                        </div>
+                        <label htmlFor="email" className="block text-sm font-medium text-content-secondary mb-2">Email Address</label>
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                        />
                     </div>
                     <div>
-                        <h3 className="font-bold text-base mb-2 text-content-primary">Brands</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {brands.map(user => (
-                                <Button key={user.id} variant="secondary" size="lg" className="w-full justify-start" onClick={() => onLogin(user)}>
-                                    {user.name}
-                                </Button>
-                            ))}
-                        </div>
+                        <label htmlFor="password"  className="block text-sm font-medium text-content-secondary mb-2">Password</label>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autoComplete="current-password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                        />
                     </div>
+                    {loginError && <p className="text-red-500 text-sm">{loginError}</p>}
                     <div>
-                        <h3 className="font-bold text-base mb-2 text-content-primary">Drivers</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {drivers.map(user => (
-                                <Button key={user.id} variant="secondary" size="lg" className="w-full justify-start" onClick={() => onLogin(user)}>
-                                    {user.name}
-                                </Button>
-                            ))}
-                        </div>
+                        <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                            {loading ? 'Logging in...' : 'Login'}
+                        </Button>
                     </div>
-                </div>
+                </form>
             </Modal>
         </div>
     );

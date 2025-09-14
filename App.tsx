@@ -2,12 +2,13 @@
 
 import React, { useState, createContext, useContext, useEffect, useMemo } from 'react';
 import { User, UserRole, Parcel } from './types';
-import { DataProvider } from './context/DataContext';
+import { DataProvider, useData } from './context/DataContext';
 import AdminDashboard from './components/admin/AdminDashboard';
 import BrandDashboard from './components/client/ClientDashboard';
 import DriverApp from './components/driver/DriverApp';
 import LoginScreen from './components/LoginScreen';
 import CustomerDashboard from './components/customer/CustomerDashboard';
+import { supabase } from './supabase';
 
 type Theme = 'light' | 'dark';
 type ThemeContextType = {
@@ -62,6 +63,42 @@ export const useTheme = () => {
 const AppContent: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeParcel, setActiveParcel] = useState<Parcel | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(true);
+  const { users, loading: isDataLoading } = useData();
+
+  useEffect(() => {
+    const getSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && users.length > 0) {
+            const userProfile = users.find(u => u.id === session.user.id);
+            if (userProfile) {
+                setCurrentUser(userProfile);
+            }
+        }
+        setCheckingStatus(false);
+    };
+
+    if (!isDataLoading) {
+        getSession();
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+            setCurrentUser(null);
+            setActiveParcel(null);
+        } else if (session && users.length > 0) {
+            const userProfile = users.find(u => u.id === session.user.id);
+            if (userProfile) {
+                setCurrentUser(userProfile);
+            }
+        }
+    });
+
+    return () => {
+        authListener.subscription.unsubscribe();
+    };
+  }, [users, isDataLoading]);
+
 
   const handleLogin = (user: User, parcel?: Parcel) => {
     setCurrentUser(user);
@@ -70,13 +107,21 @@ const AppContent: React.FC = () => {
     }
   };
 
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
     setActiveParcel(null);
   };
 
   const renderContent = () => {
+    if (checkingStatus || isDataLoading) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
     if (!currentUser) {
       return <LoginScreen onLogin={handleLogin} />;
     }
