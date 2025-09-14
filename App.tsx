@@ -1,5 +1,3 @@
-
-
 import React, { useState, createContext, useContext, useEffect, useMemo } from 'react';
 import { User, UserRole, Parcel } from './types';
 import { DataProvider, useData } from './context/DataContext';
@@ -59,45 +57,62 @@ export const useTheme = () => {
     return context;
 };
 
+// Case conversion helpers for fetching user profile
+const toCamel = (s: string): string => s.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
+const isObject = (obj: any): boolean => obj === Object(obj) && !Array.isArray(obj) && typeof obj !== 'function';
+const keysToCamel = (obj: any): any => {
+  if (isObject(obj)) {
+    const n: { [key: string]: any } = {};
+    Object.keys(obj).forEach((k) => { n[toCamel(k)] = keysToCamel(obj[k]); });
+    return n;
+  } else if (Array.isArray(obj)) {
+    return obj.map((i) => keysToCamel(i));
+  }
+  return obj;
+};
 
 const AppContent: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeParcel, setActiveParcel] = useState<Parcel | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(true);
-  const { users, loading: isDataLoading } = useData();
+  const { loading: isDataLoading } = useData();
 
   useEffect(() => {
-    const getSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session && users.length > 0) {
-            const userProfile = users.find(u => u.id === session.user.id);
-            if (userProfile) {
-                setCurrentUser(userProfile);
-            }
+    const fetchUserProfile = async (userId: string): Promise<User | null> => {
+        const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+        if (error || !data) {
+            console.error('Error fetching user profile:', error?.message);
+            return null;
         }
-        setCheckingStatus(false);
+        return keysToCamel(data) as User;
     };
 
-    if (!isDataLoading) {
-        getSession();
-    }
+    // Check for active session on initial load
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session) {
+            const userProfile = await fetchUserProfile(session.user.id);
+            setCurrentUser(userProfile);
+        }
+        setCheckingStatus(false);
+    });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_OUT') {
             setCurrentUser(null);
             setActiveParcel(null);
-        } else if (session && users.length > 0) {
-            const userProfile = users.find(u => u.id === session.user.id);
-            if (userProfile) {
-                setCurrentUser(userProfile);
-            }
+        } else if (session) {
+            const userProfile = await fetchUserProfile(session.user.id);
+            setCurrentUser(userProfile);
+            // If there's a session but no profile, they will be logged in but can't see anything.
+            // This is better than logging them out, as their profile might be created shortly after.
+            // The UI will handle the null currentUser state correctly.
         }
     });
 
     return () => {
         authListener.subscription.unsubscribe();
     };
-  }, [users, isDataLoading]);
+  }, []);
 
 
   const handleLogin = (user: User, parcel?: Parcel) => {
@@ -114,6 +129,8 @@ const AppContent: React.FC = () => {
   };
 
   const renderContent = () => {
+    // Show loader while checking auth status OR while the main app data is loading.
+    // This ensures dashboards have the data they need from DataContext before rendering.
     if (checkingStatus || isDataLoading) {
         return (
             <div className="flex justify-center items-center h-screen">
