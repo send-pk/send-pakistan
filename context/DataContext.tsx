@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { Parcel, User, ParcelStatus, UserRole, Invoice, DataContextType, ParcelHistoryEvent, ReconciliationDetails, DutyLogEvent, Item, SalaryPayment } from '../types';
 import { supabase } from '../supabase';
@@ -300,6 +301,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [parcels, users]);
 
     const createUserWithProfile = async (email: string, password: string, role: UserRole, profileData: Omit<User, 'id' | 'role' | 'status' | 'email'>): Promise<User | null> => {
+        // Check for existing username or email before anything else
+        const { username } = profileData;
+        const existingUser = users.find(u => 
+            u.email.toLowerCase() === email.toLowerCase() || 
+            (username && u.username && u.username.toLowerCase() === username.toLowerCase())
+        );
+    
+        if (existingUser) {
+            alert(`Error: A user with that ${existingUser.email.toLowerCase() === email.toLowerCase() ? 'email' : 'username'} already exists.`);
+            return null;
+        }
+
         // First, create the authenticated user
         const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
         if (authError || !authData.user) {
@@ -332,7 +345,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addNewBrand = useCallback(async (brandData: any) => {
         await createUserWithProfile(brandData.email, brandData.password, UserRole.BRAND, brandData);
-    }, []);
+    }, [users]);
 
     const updateBrand = useCallback(async (brandId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
         if (updatedData.pickupLocations) {
@@ -345,7 +358,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     const addNewDriver = useCallback(async (driverData: any) => {
         await createUserWithProfile(driverData.email, driverData.password, UserRole.DRIVER, driverData);
-    }, []);
+    }, [users]);
 
     const updateDriver = useCallback(async (driverId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
         const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', driverId).select().single();
@@ -355,7 +368,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     const addNewSalesManager = useCallback(async (managerData: any) => {
         await createUserWithProfile(managerData.email, managerData.password, UserRole.SALES_MANAGER, managerData);
-    }, []);
+    }, [users]);
 
     const updateSalesManager = useCallback(async (managerId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
         const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', managerId).select().single();
@@ -365,7 +378,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addNewDirectSales = useCallback(async (salesData: any) => {
         await createUserWithProfile(salesData.email, salesData.password, UserRole.DIRECT_SALES, salesData);
-    }, []);
+    }, [users]);
 
     const updateDirectSales = useCallback(async (salesId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
         const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', salesId).select().single();

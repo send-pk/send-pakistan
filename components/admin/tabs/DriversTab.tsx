@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../../../context/DataContext';
 import { User, UserRole, Parcel, ParcelStatus } from '../../../types';
@@ -128,7 +129,7 @@ interface DriversTabProps {
 }
 
 const initialFormState = {
-    name: '', phone: '', email: '', password: '', deliveryZones: [] as string[],
+    name: '', phone: '', email: '', username: '', password: '', deliveryZones: [] as string[],
     photoUrl: '', whatsappNumber: '', currentAddress: '',
     permanentAddress: '', guardianContact: '', idCardNumber: ''
 };
@@ -161,6 +162,7 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                 name: editingDriver.name, 
                 phone: editingDriver.phone || '', 
                 email: editingDriver.email || '',
+                username: editingDriver.username || '',
                 password: '', // Never pre-fill password
                 deliveryZones: editingDriver.deliveryZones || [],
                 photoUrl: editingDriver.photoUrl || '',
@@ -206,7 +208,7 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
             const { password, ...updateData } = driverFormData;
             if (updateData.name) updateDriver(editingDriver.id, updateData);
         } else {
-            if (driverFormData.name && driverFormData.email && driverFormData.password) {
+            if (driverFormData.name && driverFormData.email && driverFormData.password && driverFormData.username) {
                 addNewDriver(driverFormData);
             }
         }
@@ -339,11 +341,10 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                                     <div className="md:col-span-2 space-y-2">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             <div><FormLabel htmlFor="d_name">Driver Name</FormLabel><FormInput id="d_name" name="name" value={driverFormData.name} onChange={handleDriverFormInputChange} required /></div>
-                                            <div><FormLabel htmlFor="d_email">Email (for login)</FormLabel><FormInput id="d_email" name="email" type="email" value={driverFormData.email} onChange={handleDriverFormInputChange} required disabled={!!editingDriver} /></div>
+                                            <div><FormLabel htmlFor="d_username">Username</FormLabel><FormInput id="d_username" name="username" value={driverFormData.username} onChange={handleDriverFormInputChange} required disabled={!!editingDriver} /></div>
                                         </div>
-                                        {!editingDriver && (
-                                            <div><FormLabel htmlFor="d_password">Password</FormLabel><FormInput id="d_password" name="password" type="password" value={driverFormData.password} onChange={handleDriverFormInputChange} required /></div>
-                                        )}
+                                        <div><FormLabel htmlFor="d_email">Email (for login)</FormLabel><FormInput id="d_email" name="email" type="email" value={driverFormData.email} onChange={handleDriverFormInputChange} required disabled={!!editingDriver} /></div>
+                                        {!editingDriver && (<div><FormLabel htmlFor="d_password">Password</FormLabel><FormInput id="d_password" name="password" type="password" value={driverFormData.password} onChange={handleDriverFormInputChange} required /></div>)}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             <div><FormLabel htmlFor="d_phone">Phone Number</FormLabel><FormInput id="d_phone" name="phone" value={driverFormData.phone} onChange={handleDriverFormInputChange} /></div>
                                             <div><FormLabel htmlFor="d_whatsapp">WhatsApp Number</FormLabel><FormInput id="d_whatsapp" name="whatsappNumber" value={driverFormData.whatsappNumber || ''} onChange={handleDriverFormInputChange} /></div>

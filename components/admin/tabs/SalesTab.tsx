@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../../../context/DataContext';
 import { User, UserRole, Parcel, ParcelStatus, SalaryPayment } from '../../../types';
@@ -18,7 +19,7 @@ const FormInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input
 const FormLabel = ({ children, htmlFor }: { children: React.ReactNode, htmlFor?: string }) => <label htmlFor={htmlFor} className="block mb-1 text-sm text-content-secondary font-medium">{children}</label>;
 const FormSelect = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} className={`w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors ${props.className}`} />;
 
-const initialFormState = { name: '', email: '', password: '', baseSalary: '0', commissionRate: '0', perPickupCommission: '0', perDeliveryCommission: '0', brandCommissions: {} as { [key: string]: string } };
+const initialFormState = { name: '', email: '', username: '', password: '', baseSalary: '0', commissionRate: '0', perPickupCommission: '0', perDeliveryCommission: '0', brandCommissions: {} as { [key: string]: string } };
 
 interface SalesTabProps {
     parcels: Parcel[];
@@ -52,6 +53,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
             setFormData({
                 name: editingUser.name,
                 email: editingUser.email,
+                username: editingUser.username || '',
                 password: '', // Never pre-fill password
                 baseSalary: String(editingUser.baseSalary || 0),
                 commissionRate: String(editingUser.commissionRate || 0),
@@ -117,7 +119,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
         }
 
         const dataToSave = {
-            name: formData.name, email: formData.email, password: formData.password,
+            name: formData.name, email: formData.email, username: formData.username, password: formData.password,
             baseSalary: parseFloat(formData.baseSalary) || 0,
             commissionRate: parseFloat(formData.commissionRate) || 0,
             perPickupCommission: parseFloat(formData.perPickupCommission) || 0,
@@ -433,8 +435,9 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
             <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingUser ? `Edit ${editingUser.name}` : `Add New Employee`} size="3xl">
                 <form onSubmit={handleFormSubmit}>
                     <div className="max-h-[70vh] overflow-y-auto p-1 pr-2 space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div><FormLabel htmlFor="emp_name">Name</FormLabel><FormInput id="emp_name" name="name" value={formData.name} onChange={handleInputChange} required /></div>
+                            <div><FormLabel htmlFor="emp_username">Username (for login)</FormLabel><FormInput id="emp_username" name="username" value={formData.username} onChange={handleInputChange} required disabled={!!editingUser} /></div>
                             <div><FormLabel htmlFor="emp_email">Email (for login)</FormLabel><FormInput id="emp_email" name="email" type="email" value={formData.email} onChange={handleInputChange} required disabled={!!editingUser} /></div>
                             {!editingUser && <div><FormLabel htmlFor="emp_password">Password</FormLabel><FormInput id="emp_password" name="password" type="password" value={formData.password} onChange={handleInputChange} required /></div>}
                         </div>

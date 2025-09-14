@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../../../context/DataContext';
 import { User, UserRole, PickupLocation } from '../../../types';
@@ -23,7 +24,7 @@ const getDefaultWeightCharges = (): { [key: string]: string } => {
 }
 
 const initialFormState = { 
-    name: '', email: '', password: '',
+    name: '', email: '', username: '', password: '',
     bankName: '', 
     accountTitle: '', accountNumber: '', companyPhone: '', 
     correspondentName: '', correspondentPhone: '',
@@ -52,6 +53,7 @@ export const BrandsTab: React.FC = () => {
             setBrandFormData({ 
                 name: editingBrand.name, 
                 email: editingBrand.email,
+                username: editingBrand.username || '',
                 password: '', // Password is not edited
                 bankName: editingBrand.bankName || '',
                 accountTitle: editingBrand.accountTitle || '',
@@ -101,7 +103,7 @@ export const BrandsTab: React.FC = () => {
     
     const handleBrandFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const { name, email, password, bankName, accountTitle, accountNumber, companyPhone, correspondentName, correspondentPhone, officeAddress, pickupLocations, weightCharges, fuelSurcharge } = brandFormData;
+        const { name, email, username, password, bankName, accountTitle, accountNumber, companyPhone, correspondentName, correspondentPhone, officeAddress, pickupLocations, weightCharges, fuelSurcharge } = brandFormData;
         
         const numericWeightCharges: { [key: string]: number } = {};
         for (const weight in weightCharges) {
@@ -109,7 +111,7 @@ export const BrandsTab: React.FC = () => {
         }
 
         const dataToSave = { 
-            name, email, password, bankName, accountTitle, 
+            name, email, username, password, bankName, accountTitle, 
             accountNumber, companyPhone, correspondentName, correspondentPhone,
             officeAddress, pickupLocations,
             weightCharges: numericWeightCharges,
@@ -122,7 +124,7 @@ export const BrandsTab: React.FC = () => {
                 updateBrand(editingBrand.id, updateData);
             }
         } else {
-            if (name && email && password) {
+            if (name && email && password && username) {
                 addNewBrand(dataToSave);
             }
         }
@@ -186,7 +188,8 @@ export const BrandsTab: React.FC = () => {
                     <div className="max-h-[70vh] overflow-y-auto p-1 pr-2 space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                            <div><FormLabel htmlFor="name">Brand Name</FormLabel><FormInput id="name" name="name" value={brandFormData.name} onChange={handleBrandFormInputChange} required /></div>
-                           <div><FormLabel htmlFor="email">Email Address (for login)</FormLabel><FormInput id="email" name="email" type="email" value={brandFormData.email} onChange={handleBrandFormInputChange} required /></div>
+                           <div><FormLabel htmlFor="username">Username (for login)</FormLabel><FormInput id="username" name="username" value={brandFormData.username} onChange={handleBrandFormInputChange} required disabled={!!editingBrand} /></div>
+                           <div><FormLabel htmlFor="email">Email Address (for login)</FormLabel><FormInput id="email" name="email" type="email" value={brandFormData.email} onChange={handleBrandFormInputChange} required disabled={!!editingBrand} /></div>
                            {!editingBrand && <div><FormLabel htmlFor="password">Password</FormLabel><FormInput id="password" name="password" type="password" value={brandFormData.password} onChange={handleBrandFormInputChange} required /></div>}
                            <div><FormLabel htmlFor="companyPhone">Company Phone</FormLabel><FormInput id="companyPhone" name="companyPhone" value={brandFormData.companyPhone} onChange={handleBrandFormInputChange} /></div>
                            <div className="lg:col-span-2"><FormLabel htmlFor="officeAddress">Office Address</FormLabel><FormInput id="officeAddress" name="officeAddress" value={brandFormData.officeAddress} onChange={handleBrandFormInputChange} /></div>

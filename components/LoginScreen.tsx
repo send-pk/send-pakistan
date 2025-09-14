@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Card } from './shared/Card';
 import { Button } from './shared/Button';
@@ -16,11 +17,11 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-    const { parcels } = useData();
+    const { parcels, users } = useData();
     const [trackingNumber, setTrackingNumber] = useState('');
     const [error, setError] = useState('');
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-    const [email, setEmail] = useState('');
+    const [loginIdentifier, setLoginIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [loginError, setLoginError] = useState('');
@@ -41,17 +42,34 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         e.preventDefault();
         setLoading(true);
         setLoginError('');
+
+        const identifier = loginIdentifier.trim();
+        let emailToLogin = '';
+
+        // Check if identifier is an email or username
+        if (identifier.includes('@')) {
+            emailToLogin = identifier.toLowerCase();
+        } else {
+            const userByUsername = users.find(u => u.username?.toLowerCase() === identifier.toLowerCase());
+            if (userByUsername) {
+                emailToLogin = userByUsername.email;
+            } else {
+                setLoginError('Invalid username/email or password.');
+                setLoading(false);
+                return;
+            }
+        }
+        
         try {
             const { error } = await supabase.auth.signInWithPassword({
-                email,
+                email: emailToLogin,
                 password,
             });
             if (error) throw error;
             // On successful login, the onAuthStateChange listener in App.tsx will handle the rest.
-            // No need to call onLogin here.
             setIsLoginModalOpen(false);
         } catch (error: any) {
-            setLoginError(error.message || 'An unexpected error occurred.');
+            setLoginError('Invalid username/email or password.');
         } finally {
             setLoading(false);
         }
@@ -124,15 +142,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             <Modal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} title="Portal Login" size="md">
                 <form onSubmit={handleEmailLogin} className="space-y-4 p-1">
                     <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-content-secondary mb-2">Email Address</label>
+                        <label htmlFor="loginIdentifier" className="block text-sm font-medium text-content-secondary mb-2">Email or Username</label>
                         <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            autoComplete="email"
+                            id="loginIdentifier"
+                            name="loginIdentifier"
+                            type="text"
+                            autoComplete="username"
                             required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            value={loginIdentifier}
+                            onChange={(e) => setLoginIdentifier(e.target.value)}
                             className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
                         />
                     </div>
