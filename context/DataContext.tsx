@@ -47,7 +47,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
+        let isMounted = true;
         const fetchData = async () => {
+            if (!isMounted) return;
             setLoading(true);
             try {
                 const [parcelsRes, usersRes, invoicesRes, salaryPaymentsRes] = await Promise.all([
@@ -56,6 +58,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     supabase.from('invoices').select('*'),
                     supabase.from('salary_payments').select('*')
                 ]);
+
+                if (!isMounted) return;
 
                 if (parcelsRes.error) {
                     console.error("Error fetching parcels:", parcelsRes.error.message);
@@ -82,12 +86,47 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
 
             } catch (error) {
-                console.error("A critical error occurred while fetching data from Supabase:", error);
+                if (isMounted) console.error("A critical error occurred while fetching data from Supabase:", error);
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
+        
         fetchData();
+
+        const handleParcelChange = (payload: any) => {
+            switch(payload.eventType) {
+                case 'INSERT': setParcels(current => [...current, keysToCamel(payload.new)]); break;
+                case 'UPDATE': setParcels(current => current.map(p => p.id === payload.new.id ? keysToCamel(payload.new) : p)); break;
+                case 'DELETE': setParcels(current => current.filter(p => p.id !== payload.old.id)); break;
+                default: break;
+            }
+        };
+
+        const handleUserChange = (payload: any) => {
+             switch(payload.eventType) {
+                case 'INSERT': setUsers(current => [...current, keysToCamel(payload.new)]); break;
+                case 'UPDATE': setUsers(current => current.map(u => u.id === payload.new.id ? keysToCamel(payload.new) : u)); break;
+                case 'DELETE': setUsers(current => current.filter(u => u.id !== payload.old.id)); break;
+                default: break;
+            }
+        };
+
+        const parcelsSubscription = supabase
+            .channel('public:parcels')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'parcels' }, handleParcelChange)
+            .subscribe();
+            
+        const usersSubscription = supabase
+            .channel('public:users')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, handleUserChange)
+            .subscribe();
+
+        return () => {
+            isMounted = false;
+            supabase.removeChannel(parcelsSubscription);
+            supabase.removeChannel(usersSubscription);
+        };
     }, []);
 
     const updateParcelStatus = useCallback(async (parcelId: string, status: ParcelStatus, currentUser?: User, details?: { reason?: string; proof?: string; deliveryZone?: string; driverId?: string; weight?: number; }) => {
@@ -103,7 +142,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const { error: mainError } = await supabase.from('parcels').update(keysToSnake(mainUpdate)).eq('id', parcelId);
             if (mainError) return handleError(mainError, 'updating main exchange parcel');
             
-            setParcels(prev => prev.map(p => p.id === parcelId ? { ...p, ...mainUpdate } : p));
+            // Local update will be handled by the real-time subscription
 
             if (mainParcel.linkedParcelId) {
                 const linkedParcel = parcels.find(p => p.id === mainParcel.linkedParcelId);
@@ -114,7 +153,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     const { error: linkedError } = await supabase.from('parcels').update(keysToSnake(linkedUpdate)).eq('id', mainParcel.linkedParcelId);
                     if (linkedError) return handleError(linkedError, 'updating linked exchange parcel');
                     
-                    setParcels(prev => prev.map(p => p.id === mainParcel.linkedParcelId ? { ...p, ...linkedUpdate } : p));
+                    // Local update will be handled by the real-time subscription
                 }
             }
         } else {
@@ -154,7 +193,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const { error } = await supabase.from('parcels').update(keysToSnake(finalUpdate)).eq('id', parcelId);
 
             if (error) return handleError(error, 'updating parcel status');
-            setParcels(prev => prev.map(p => p.id === parcelId ? finalUpdate : p));
+            // Local update will be handled by the real-time subscription
         }
     }, [parcels, users]);
     
@@ -174,7 +213,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { error } = await supabase.from('parcels').upsert(updates);
         if (error) return console.error('Error batch updating parcels:', error);
 
-        setParcels(currentParcels => currentParcels.map(p => localUpdates.find(up => up.id === p.id) || p));
+        // Local update will be handled by the real-time subscription
     }, [parcels]);
 
     const bookNewParcel = useCallback(async (newParcelData: Omit<Parcel, 'id' | 'trackingNumber' | 'createdAt' | 'updatedAt' | 'status' | 'pickupDriverId' | 'deliveryDriverId' | 'deliveryCharge' | 'tax' | 'isCodReconciled' | 'invoiceId' | 'failedAttemptReason' | 'proofOfAttempt' | 'history' | 'returnItemDetails' | 'pickupAddress'> & { pickupLocationId: string }): Promise<Parcel | null> => {
@@ -215,9 +254,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
              return null;
         }
 
-        const newParcel = keysToCamel(data) as Parcel;
-        setParcels(prev => [...prev, newParcel]);
-        return newParcel;
+        // Local update will be handled by the real-time subscription
+        return keysToCamel(data) as Parcel;
     }, [users]);
     
     const initiateExchange = useCallback(async (originalParcelId: string, newOutboundDetails: { orderId: string; itemDetails: string; codAmount: number; deliveryInstructions?: string; }, returnItemDetails: Item[]): Promise<{ outboundParcel: Parcel; returnParcel: Parcel; } | null> => {
@@ -259,7 +297,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         newOutbound.linkedParcelId = newReturn.id;
         newReturn.linkedParcelId = newOutbound.id;
 
-        setParcels(prev => [...prev, newOutbound, newReturn]);
+        // Local update will be handled by the real-time subscription
         return { outboundParcel: newOutbound, returnParcel: newReturn };
     }, [parcels, users]);
 
@@ -291,13 +329,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { error } = await supabase.from('parcels').upsert(updates);
         if (error) return console.error('Error reassigning jobs:', error);
 
-        setParcels(prev => prev.map(p => {
-            const updated = parcelsToUpdate.find(u => u.id === p.id);
-            if (updated) {
-                return { ...p, [jobType === 'pickup' ? 'pickupDriverId' : 'deliveryDriverId']: toDriverId, history: [...p.history, newHistoryEvent], updatedAt: new Date().toISOString() };
-            }
-            return p;
-        }));
+        // Local update will be handled by the real-time subscription
     }, [parcels, users]);
 
     const createUserWithProfile = async (email: string, password: string, role: UserRole, profileData: Omit<User, 'id' | 'role' | 'status' | 'email'>): Promise<User | null> => {
@@ -338,9 +370,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return null;
         }
         
-        const newUser = keysToCamel(profile) as User;
-        setUsers(prev => [...prev, newUser]);
-        return newUser;
+        // Local update will be handled by the real-time subscription
+        return keysToCamel(profile) as User;
     };
 
     const addNewBrand = useCallback(async (brandData: any) => {
@@ -353,7 +384,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', brandId).select().single();
         if (error || !data) return console.error('Error updating brand:', error);
-        setUsers(prev => prev.map(u => u.id === brandId ? keysToCamel(data) : u));
+        // Local update will be handled by the real-time subscription
     }, []);
     
     const addNewDriver = useCallback(async (driverData: any) => {
@@ -363,7 +394,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateDriver = useCallback(async (driverId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
         const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', driverId).select().single();
         if (error || !data) return console.error('Error updating driver:', error);
-        setUsers(prev => prev.map(u => u.id === driverId ? keysToCamel(data) : u));
+        // Local update will be handled by the real-time subscription
     }, []);
     
     const addNewSalesManager = useCallback(async (managerData: any) => {
@@ -373,7 +404,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateSalesManager = useCallback(async (managerId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
         const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', managerId).select().single();
         if(error || !data) return console.error('Error updating sales manager:', error);
-        setUsers(prev => prev.map(u => u.id === managerId ? keysToCamel(data) : u));
+        // Local update will be handled by the real-time subscription
     }, []);
 
     const addNewDirectSales = useCallback(async (salesData: any) => {
@@ -383,7 +414,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateDirectSales = useCallback(async (salesId: string, updatedData: Partial<Omit<User, 'id' | 'role'>>) => {
         const { data, error } = await supabase.from('users').update(keysToSnake(updatedData)).eq('id', salesId).select().single();
         if(error || !data) return console.error('Error updating direct sales:', error);
-        setUsers(prev => prev.map(u => u.id === salesId ? keysToCamel(data) : u));
+        // Local update will be handled by the real-time subscription
     }, []);
 
     const toggleUserStatus = useCallback(async (userId: string) => {
@@ -392,7 +423,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
         const { data, error } = await supabase.from('users').update({ status: newStatus }).eq('id', userId).select().single();
         if (error || !data) return console.error('Error toggling user status:', error);
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+        // Local update will be handled by the real-time subscription
     }, [users]);
 
     const toggleDriverDutyStatus = useCallback(async (driverId: string) => {
@@ -403,7 +434,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newDutyLog = [...(user.dutyLog || []), newLogEntry];
         const { data, error } = await supabase.from('users').update({ on_duty: newOnDutyStatus, duty_log: newDutyLog }).eq('id', driverId).select().single();
         if (error || !data) return console.error('Error toggling duty status:', error);
-        setUsers(prev => prev.map(u => u.id === driverId ? keysToCamel(data) : u));
+        // Local update will be handled by the real-time subscription
     }, [users]);
     
     const deleteParcel = useCallback(async (parcelIds: string[]) => {
@@ -411,7 +442,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const updates = parcelIds.map(id => ({ id, status: ParcelStatus.CANCELED, updated_at: new Date().toISOString() }));
         const { error } = await supabase.from('parcels').upsert(updates);
         if (error) return console.error('Error canceling parcels:', error);
-        setParcels(prev => prev.map(p => parcelIds.includes(p.id) ? { ...p, status: ParcelStatus.CANCELED, updatedAt: new Date().toISOString() } : p));
+        // Local update will be handled by the real-time subscription
     }, []);
 
     const generateInvoiceForPayout = useCallback(async (brandId: string, parcelIds: string[]) => {
@@ -431,7 +462,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if(parcelUpdateError) return console.error('Error updating parcels with invoice ID:', parcelUpdateError);
 
         setInvoices(prev => [...prev, keysToCamel(newInvoice)]);
-        setParcels(prev => prev.map(p => parcelIds.includes(p.id) ? { ...p, invoiceId: newInvoice.id } : p));
+        // Local parcel updates will be handled by the real-time subscription
     }, [users, parcels]);
 
     const markInvoiceAsPaid = useCallback(async (invoiceId: string, transactionId: string) => {
@@ -450,10 +481,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { error } = await supabase.from('parcels').upsert(keysToSnake(updates));
         if (error) return console.error('Error reconciling COD:', error);
 
-        setParcels(prev => prev.map(p => {
-            if (parcelIds.includes(p.id)) return { ...p, isCodReconciled: true, history: [...p.history, newHistoryEvent] };
-            return p;
-        }));
+        // Local update will be handled by the real-time subscription
     }, [parcels]);
 
     const markSalaryAsPaid = useCallback(async (paymentData: Omit<SalaryPayment, 'id' | 'status' | 'paidAt'> & { transactionId: string }) => {
@@ -466,26 +494,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const addBrandRemark = useCallback(async (parcelId: string, remark: string) => {
         const { data, error } = await supabase.from('parcels').update({ brand_remark: remark, updated_at: new Date().toISOString() }).eq('id', parcelId).select().single();
         if(error || !data) return console.error('Error adding brand remark:', error);
-        setParcels(prev => prev.map(p => p.id === parcelId ? keysToCamel(data) : p));
+        // Local update will be handled by the real-time subscription
     }, []);
     
     const addShipperAdvice = useCallback(async (parcelId: string, advice: string) => {
         const { data, error } = await supabase.from('parcels').update({ shipper_advice: advice, updated_at: new Date().toISOString() }).eq('id', parcelId).select().single();
         if(error || !data) return console.error('Error adding shipper advice:', error);
-        setParcels(prev => prev.map(p => p.id === parcelId ? keysToCamel(data) : p));
+        // Local update will be handled by the real-time subscription
     }, []);
 
     const manuallyAssignDriver = useCallback(async (parcelId: string, driverId: string | null, type: 'pickup' | 'delivery') => {
         const key = type === 'pickup' ? 'pickup_driver_id' : 'delivery_driver_id';
         const { data, error } = await supabase.from('parcels').update({ [key]: driverId || null, updated_at: new Date().toISOString() }).eq('id', parcelId).select().single();
         if (error || !data) return console.error('Error manually assigning driver:', error);
-        setParcels(prev => prev.map(p => p.id === parcelId ? keysToCamel(data) : p));
+        // Local update will be handled by the real-time subscription
     }, []);
 
     const updateDriverLocation = useCallback(async (driverId: string, location: { lat: number, lng: number }) => {
         const { error } = await supabase.from('users').update({ current_location: location }).eq('id', driverId);
         if (error) return console.error('Error updating driver location:', error);
-        setUsers(prev => prev.map(u => u.id === driverId ? { ...u, currentLocation: location } : u));
+        // Local update will be handled by the real-time subscription
     }, []);
 
     const value = useMemo(() => ({
