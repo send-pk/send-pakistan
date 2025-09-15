@@ -1,7 +1,3 @@
-
-
-
-
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { Parcel, User, ParcelStatus, UserRole, Invoice, DataContextType, ParcelHistoryEvent, ReconciliationDetails, DutyLogEvent, Item, SalaryPayment } from '../types';
 import { supabase } from '../supabase';
@@ -129,12 +125,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
 
         const parcelsSubscription = supabase
-            .channel('public:parcels')
+            .channel('parcels-channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'parcels' }, handleParcelChange)
             .subscribe();
             
         const usersSubscription = supabase
-            .channel('public:users')
+            .channel('users-channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, handleUserChange)
             .subscribe();
 
