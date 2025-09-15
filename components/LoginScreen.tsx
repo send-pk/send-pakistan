@@ -1,11 +1,8 @@
-
-
 import React, { useState } from 'react';
 import { Card } from './shared/Card';
 import { Button } from './shared/Button';
 import { ThemeToggle } from './shared/ThemeToggle';
 import { Logo } from './shared/Logo';
-import { useData } from '../context/DataContext';
 import { User, UserRole, Parcel } from '../types';
 import { SearchIcon } from './icons/SearchIcon';
 import { Modal } from './shared/Modal';
@@ -16,25 +13,57 @@ interface LoginScreenProps {
   onLogin: (user: User, parcel?: Parcel) => void;
 }
 
+// Case conversion helpers moved here for direct DB query
+const toCamel = (s: string): string => s.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
+const isObject = (obj: any): boolean => obj === Object(obj) && !Array.isArray(obj) && typeof obj !== 'function';
+const keysToCamel = (obj: any): any => {
+  if (isObject(obj)) {
+    const n: { [key: string]: any } = {};
+    Object.keys(obj).forEach((k) => { n[toCamel(k)] = keysToCamel(obj[k]); });
+    return n;
+  } else if (Array.isArray(obj)) {
+    return obj.map((i) => keysToCamel(i));
+  }
+  return obj;
+};
+
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-    const { parcels, users } = useData();
     const [trackingNumber, setTrackingNumber] = useState('');
     const [error, setError] = useState('');
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [loginIdentifier, setLoginIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isTracking, setIsTracking] = useState(false);
     const [loginError, setLoginError] = useState('');
 
 
-    const handleTrack = (e: React.FormEvent) => {
+    const handleTrack = async (e: React.FormEvent) => {
         e.preventDefault();
-        const foundParcel = parcels.find(p => p.trackingNumber.toLowerCase() === trackingNumber.toLowerCase().trim());
-        if (foundParcel) {
+        if (!trackingNumber.trim()) return;
+
+        setIsTracking(true);
+        setError('');
+
+        try {
+            const { data, error: dbError } = await supabase
+                .from('parcels')
+                .select('*')
+                .ilike('tracking_number', trackingNumber.trim())
+                .single();
+
+            if (dbError || !data) {
+                throw new Error("Parcel not found");
+            }
+            
+            const foundParcel = keysToCamel(data) as Parcel;
             const customerUser: User = { id: 'customer-temp', name: foundParcel.recipientName, email: 'customer@temp.com', role: UserRole.CUSTOMER, status: 'ACTIVE' };
             onLogin(customerUser, foundParcel);
-        } else {
+
+        } catch (err) {
             setError('Tracking number not found. Please check and try again.');
+        } finally {
+            setIsTracking(false);
         }
     };
     
@@ -46,29 +75,39 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         const identifier = loginIdentifier.trim();
         let emailToLogin = '';
 
-        // Check if identifier is an email or username
-        if (identifier.includes('@')) {
-            emailToLogin = identifier.toLowerCase();
-        } else {
-            const userByUsername = users.find(u => u.username?.toLowerCase() === identifier.toLowerCase());
-            if (userByUsername) {
+        try {
+            // If identifier is not an email, query for the username
+            if (!identifier.includes('@')) {
+                const { data: userByUsername, error: userError } = await supabase
+                    .from('users')
+                    .select('email')
+                    .ilike('username', identifier) // Case-insensitive search
+                    .single();
+
+                if (userError || !userByUsername) {
+                    // To prevent user enumeration, we use a generic error message and log the real one
+                    console.error('Username lookup failed:', userError?.message);
+                    throw new Error('Invalid credentials');
+                }
                 emailToLogin = userByUsername.email;
             } else {
-                setLoginError('Invalid username/email or password.');
-                setLoading(false);
-                return;
+                emailToLogin = identifier.toLowerCase();
             }
-        }
-        
-        try {
-            const { error } = await supabase.auth.signInWithPassword({
+
+            const { error: signInError } = await supabase.auth.signInWithPassword({
                 email: emailToLogin,
                 password,
             });
-            if (error) throw error;
+
+            if (signInError) {
+                console.error('Sign-in failed:', signInError.message);
+                throw new Error('Invalid credentials');
+            }
+            
             // On successful login, the onAuthStateChange listener in App.tsx will handle the rest.
             setIsLoginModalOpen(false);
         } catch (error: any) {
+            // Use a generic error message for security.
             setLoginError('Invalid username/email or password.');
         } finally {
             setLoading(false);
@@ -115,9 +154,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                         placeholder="Enter tracking number (e.g., SD1001)"
                                         className="flex-grow w-full bg-surface border-2 border-border rounded-lg px-4 py-2.5 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                                     />
-                                    <Button type="submit" size="lg" className="w-full sm:w-auto flex items-center justify-center gap-2">
+                                    <Button type="submit" size="lg" className="w-full sm:w-auto flex items-center justify-center gap-2" disabled={isTracking}>
                                         <SearchIcon className="w-5 h-5" />
-                                        Track
+                                        {isTracking ? 'Tracking...' : 'Track'}
                                     </Button>
                                 </div>
                                 {error && <p className="text-red-500 mt-4 text-center text-sm">{error}</p>}

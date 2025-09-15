@@ -136,7 +136,7 @@ export interface Invoice {
   id: string;
   brandId: string;
   brandName: string;
-  generatedAt: string;
+  createdAt: string;
   parcelIds: string[];
   totalCOD: number;
   totalCharges: number;

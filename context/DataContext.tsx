@@ -1,8 +1,11 @@
 
 
+
+
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { Parcel, User, ParcelStatus, UserRole, Invoice, DataContextType, ParcelHistoryEvent, ReconciliationDetails, DutyLogEvent, Item, SalaryPayment } from '../types';
 import { supabase } from '../supabase';
+import { PENDING_PARCEL_STATUSES } from '../constants';
 
 // Case conversion helpers to map between JS camelCase and Postgres snake_case
 const toCamel = (s: string): string => {
@@ -52,10 +55,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (!isMounted) return;
             setLoading(true);
             try {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const pendingStatuses = PENDING_PARCEL_STATUSES.map(s => `"${s}"`).join(',');
+
+                const ninetyDaysAgo = new Date();
+                ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
                 const [parcelsRes, usersRes, invoicesRes, salaryPaymentsRes] = await Promise.all([
-                    supabase.from('parcels').select('*'),
+                    supabase.from('parcels').select('*').or(`status.in.(${pendingStatuses}),updated_at.gte.${thirtyDaysAgo.toISOString()}`),
                     supabase.from('users').select('*'),
-                    supabase.from('invoices').select('*'),
+                    supabase.from('invoices').select('*').or(`status.eq.PENDING,created_at.gte.${ninetyDaysAgo.toISOString()}`),
                     supabase.from('salary_payments').select('*')
                 ]);
 
@@ -64,7 +74,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (parcelsRes.error) {
                     console.error("Error fetching parcels:", parcelsRes.error.message);
                 } else {
-                    setParcels(keysToCamel(parcelsRes.data || []));
+                    const camelCasedParcels = keysToCamel(parcelsRes.data || []) as Parcel[];
+                    // If createdAt is missing from fetched data (due to DB schema), use updatedAt as a fallback.
+                    // This ensures components that rely on a creation timestamp don't break.
+                    setParcels(camelCasedParcels.map(p => ({
+                        ...p,
+                        createdAt: p.createdAt || p.updatedAt,
+                    })));
                 }
     
                 if (usersRes.error) {
@@ -453,7 +469,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const totalCharges = parcelsToInvoice.reduce((sum, p) => sum + p.deliveryCharge, 0);
         const totalTax = parcelsToInvoice.reduce((sum, p) => sum + p.tax, 0);
 
-        const newInvoiceData: Invoice = { id: crypto.randomUUID(), brandId: brand.id, brandName: brand.name, generatedAt: new Date().toISOString(), parcelIds, totalCOD, totalCharges, totalTax, netPayout: totalCOD - totalCharges - totalTax, status: 'PENDING' };
+        const newInvoiceData: Invoice = { id: crypto.randomUUID(), brandId: brand.id, brandName: brand.name, createdAt: new Date().toISOString(), parcelIds, totalCOD, totalCharges, totalTax, netPayout: totalCOD - totalCharges - totalTax, status: 'PENDING' };
         
         const { data: newInvoice, error: invoiceError } = await supabase.from('invoices').insert(keysToSnake(newInvoiceData)).select().single();
         if(invoiceError || !newInvoice) return console.error('Error generating invoice:', invoiceError);

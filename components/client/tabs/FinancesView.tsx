@@ -37,7 +37,7 @@ export const FinancesView: React.FC<FinancesViewProps> = ({ user, parcelsInDateR
 
     const brandDetails = useMemo(() => users.find(u => u.id === user.id), [users, user.id]);
 
-    const brandInvoices = useMemo(() => invoices.filter(inv => inv.brandId === user.id).sort((a,b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()), [invoices, user.id]);
+    const brandInvoices = useMemo(() => invoices.filter(inv => inv.brandId === user.id).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [invoices, user.id]);
 
     const financeStats = useMemo(() => {
         const totalPaymentReceived = brandInvoices
@@ -77,7 +77,7 @@ export const FinancesView: React.FC<FinancesViewProps> = ({ user, parcelsInDateR
                             {brandInvoices.map(inv => (
                                 <tr key={inv.id} className="border-b border-border last:border-b-0">
                                     <td className="p-4 font-mono text-primary">{inv.id.slice(-8)}</td>
-                                    <td className="p-4">{formatDatePKT(inv.generatedAt)}</td>
+                                    <td className="p-4">{formatDatePKT(inv.createdAt)}</td>
                                     <td className="p-4 text-right font-semibold">PKR {inv.netPayout.toFixed(0)}</td>
                                     <td className="p-4 text-center">
                                         {inv.status === 'PAID' ? (
@@ -106,7 +106,7 @@ export const FinancesView: React.FC<FinancesViewProps> = ({ user, parcelsInDateR
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div><p className="text-content-muted">Status</p><p className={`font-semibold ${viewingInvoice.status === 'PAID' ? 'text-green-600' : 'text-yellow-600'}`}>{viewingInvoice.status}</p></div>
-                            <div><p className="text-content-muted">Generated On</p><p>{formatDatePKT(viewingInvoice.generatedAt)}</p></div>
+                            <div><p className="text-content-muted">Generated On</p><p>{formatDatePKT(viewingInvoice.createdAt)}</p></div>
                             {viewingInvoice.status === 'PAID' && <>
                                 <div><p className="text-content-muted">Paid On</p><p>{viewingInvoice.paidAt ? formatDatePKT(viewingInvoice.paidAt) : 'N/A'}</p></div>
                                 <div><p className="text-content-muted">Transaction ID</p><p>{viewingInvoice.transactionId}</p></div>

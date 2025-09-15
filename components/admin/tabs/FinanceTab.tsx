@@ -66,7 +66,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ parcelsForDateRange, all
             return { brandId, brandName: data.brandName, parcelIds: data.parcels.map(p => p.id), parcelCount: data.parcels.length, totalCOD, totalCharges, totalTax, netPayout: totalCOD - totalCharges - totalTax };
         });
 
-        return { readyForPayout: ready, generatedPayouts: invoices.sort((a,b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()) };
+        return { readyForPayout: ready, generatedPayouts: invoices.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) };
     }, [allParcels, invoices]);
 
     const financeStats = useMemo(() => {
@@ -219,7 +219,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ parcelsForDateRange, all
                     <h2 className="text-lg font-bold mb-4">Generated Invoices</h2>
                     {generatedPayouts.length === 0 ? <p className="text-center text-content-muted py-6">No invoices generated yet.</p> :
                      <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b border-border bg-surface/50 text-content-secondary"><tr><th className="p-2 font-semibold">Brand</th><th className="p-2 font-semibold">Date</th><th className="p-2 font-semibold text-right">Amount</th><th className="p-2 font-semibold text-center">Status</th><th className="p-2 font-semibold text-center">Actions</th></tr></thead>
-                            <tbody className="text-content-primary">{generatedPayouts.map(inv => (<tr key={inv.id} className="border-b border-border last:border-b-0"><td className="p-2 font-semibold">{inv.brandName}</td><td className="p-2">{formatDatePKT(inv.generatedAt)}</td><td className="p-2 text-right font-semibold">PKR {inv.netPayout.toLocaleString()}</td><td className="p-2 text-center">{inv.status === 'PENDING' ? (<Button size="sm" variant="secondary" onClick={() => setPayingInvoice(inv)}>Pay</Button>) : (<span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300">Paid</span>)}</td><td className="p-2 text-center"><Button size="sm" variant="secondary" onClick={() => setDownloadingInvoice(inv)} aria-label="Download Invoice"><DownloadIcon className="w-4 h-4" /></Button></td></tr>))}</tbody></table></div>}
+                            <tbody className="text-content-primary">{generatedPayouts.map(inv => (<tr key={inv.id} className="border-b border-border last:border-b-0"><td className="p-2 font-semibold">{inv.brandName}</td><td className="p-2">{formatDatePKT(inv.createdAt)}</td><td className="p-2 text-right font-semibold">PKR {inv.netPayout.toLocaleString()}</td><td className="p-2 text-center">{inv.status === 'PENDING' ? (<Button size="sm" variant="secondary" onClick={() => setPayingInvoice(inv)}>Pay</Button>) : (<span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300">Paid</span>)}</td><td className="p-2 text-center"><Button size="sm" variant="secondary" onClick={() => setDownloadingInvoice(inv)} aria-label="Download Invoice"><DownloadIcon className="w-4 h-4" /></Button></td></tr>))}</tbody></table></div>}
                 </Card>
             </div>
 

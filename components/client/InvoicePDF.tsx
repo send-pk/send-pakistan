@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Invoice, Parcel, User } from '../../types';
 import { Logo } from '../shared/Logo';
@@ -38,7 +39,7 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, parcels, brandD
                 <div className="text-right">
                     <h1 className="text-3xl font-bold text-gray-800">INVOICE</h1>
                     <p className="mt-1 text-gray-600 text-xs"><strong>Invoice #:</strong> {invoice.id.toUpperCase()}</p>
-                    <p className="text-gray-600 text-xs"><strong>Date:</strong> {new Date(invoice.generatedAt).toLocaleDateString()}</p>
+                    <p className="text-gray-600 text-xs"><strong>Date:</strong> {new Date(invoice.createdAt).toLocaleDateString()}</p>
                 </div>
             </header>
 
