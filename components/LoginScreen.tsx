@@ -76,15 +76,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onCustomerLogin, authError, c
         setLoginError('');
         if (authError) clearAuthError();
 
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        try {
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-        if (error) {
-            setLoginError(error.message);
-        } else {
-            // Success, onAuthStateChange will handle the rest.
-            setIsModalOpen(false);
+            if (error) {
+                setLoginError(error.message);
+            } else {
+                // Success, onAuthStateChange will handle the rest.
+                setIsModalOpen(false);
+            }
+        } catch (err: any) {
+            console.error("Login exception:", err);
+            setLoginError(err.message || "An unexpected error occurred. Please try again.");
+        } finally {
+            setIsLoggingIn(false);
         }
-        setIsLoggingIn(false);
     };
 
     const handleOpenModal = () => {
