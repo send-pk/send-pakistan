@@ -158,6 +158,11 @@ const AppContent: React.FC = () => {
       return <LoginScreen onLogin={handleLogin} />;
     }
 
+    // As requested, forcing the Admin Dashboard to load for any logged-in user.
+    // The original role-based routing logic is preserved in comments below.
+    return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
+    
+    /*
     switch (currentUser.role) {
       case UserRole.ADMIN:
       case UserRole.WAREHOUSE_MANAGER:
@@ -175,6 +180,7 @@ const AppContent: React.FC = () => {
       default:
         return <LoginScreen onLogin={handleLogin} />;
     }
+    */
   };
 
   return (
