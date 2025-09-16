@@ -7,6 +7,8 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import BrandDashboard from './components/client/ClientDashboard';
 import DriverApp from './components/driver/DriverApp';
 import { supabase } from './supabase';
+import { Button } from './components/shared/Button';
+import { AlertTriangleIcon } from './components/icons/AlertTriangleIcon';
 
 type Theme = 'light' | 'dark';
 type ThemeContextType = {
@@ -75,19 +77,16 @@ const AppContent: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeParcel, setActiveParcel] = useState<Parcel | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const { clearData } = useData();
 
   // --- HASH-BASED ROUTING IMPLEMENTATION ---
-  // Gets the path from the hash, e.g., from '#/admin' it returns '/admin'
-  // If hash is empty or just '#', it returns '/'
   const getPathFromHash = () => window.location.hash.substring(1) || '/';
   const [path, setPath] = useState(getPathFromHash());
 
   const navigate = useCallback((newPath: string) => {
-    // We expect newPath to be like '/admin' or '/'
     const currentPath = getPathFromHash();
     if (currentPath !== newPath) {
-        // This will change the URL to '.../#/admin' which triggers the hashchange event
         window.location.hash = newPath;
     }
   }, []);
@@ -96,7 +95,6 @@ const AppContent: React.FC = () => {
     const onLocationChange = () => {
         setPath(getPathFromHash());
     };
-    // Listen for hash changes to update the path state
     window.addEventListener('hashchange', onLocationChange);
     return () => {
         window.removeEventListener('hashchange', onLocationChange);
@@ -114,16 +112,33 @@ const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        // Clear previous auth errors ONLY when a new sign-in attempt is confirmed.
+        if (event === 'SIGNED_IN') {
+             setAuthError(null);
+        }
+
         if (session) {
             const userProfile = await fetchUserProfile(session.user.id);
             if (userProfile) {
+                // Success: clear any lingering errors and set user
+                setAuthError(null);
                 setCurrentUser(userProfile);
             } else {
-                console.error(`User with ID ${session.user.id} is authenticated but has no profile.`);
-                await supabase.auth.signOut();
+                // Critical failure: profile not found.
+                if (event !== 'INITIAL_SESSION') {
+                    console.error(`User with ID ${session.user.id} is authenticated but has no profile. Signing out.`);
+                    setAuthError("Your account is valid, but we couldn't load your user profile, which is required to use the app. This may be a setup issue. You have been logged out.");
+                    await supabase.auth.signOut();
+                } else {
+                    // On initial page load with a stale session, if profile fails, don't sign out.
+                    // Let the user see the error and log out manually if needed.
+                    console.error(`Could not fetch profile for existing session user ID ${session.user.id}.`);
+                    setAuthError("We couldn't load your profile from your previous session. Please try logging out and back in.");
+                    setCurrentUser(null);
+                }
             }
-        } else {
+        } else { // No session
             setCurrentUser(null);
             setActiveParcel(null);
             clearData();
@@ -138,7 +153,7 @@ const AppContent: React.FC = () => {
 
   // Effect for role-based path routing
   useEffect(() => {
-    if (checkingStatus) return; // Wait for auth check
+    if (checkingStatus || authError) return; // Wait for auth check and ensure no login error
 
     if (currentUser) {
       let targetPath = '';
@@ -168,7 +183,7 @@ const AppContent: React.FC = () => {
       // If logged out, go to login screen
       navigate('/'); 
     }
-  }, [currentUser, checkingStatus, navigate]);
+  }, [currentUser, checkingStatus, navigate, authError]);
 
 
   const handleLogin = (user: User, parcel?: Parcel) => {
@@ -181,6 +196,7 @@ const AppContent: React.FC = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setAuthError(null); // Clear auth error on manual logout
     // The onAuthStateChange listener will handle clearing user state & navigation.
   };
 
@@ -194,7 +210,7 @@ const AppContent: React.FC = () => {
     }
 
     if (!currentUser) {
-      return <LoginScreen onLogin={handleLogin} />;
+      return <LoginScreen onLogin={handleLogin} authError={authError} />;
     }
     
     // Path-based rendering for logged-in users
@@ -219,8 +235,7 @@ const AppContent: React.FC = () => {
                 if (activeParcel) {
                     return <CustomerDashboard user={currentUser} parcel={activeParcel} onLogout={handleLogout} />;
                 }
-                // Fallback for customer without a parcel (e.g. after logout/login)
-                return <LoginScreen onLogin={handleLogin} />;
+                return <LoginScreen onLogin={handleLogin} authError={authError} />;
             }
              // For other roles, show a loading spinner while the useEffect navigates them
             return (
