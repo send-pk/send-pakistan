@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useEffect, useMemo } from 'react';
+import React, { useState, createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { User, UserRole, Parcel } from './types';
 import { DataProvider, useData } from './context/DataContext';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -77,24 +77,24 @@ const AppContent: React.FC = () => {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const { loading: isDataLoading, fetchData, clearData } = useData();
 
-  const fetchUserProfile = async (userId: string): Promise<User | null> => {
+  const fetchUserProfile = useCallback(async (userId: string): Promise<User | null> => {
       const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
       if (error || !data) {
           console.error('Error fetching user profile:', error?.message);
           return null;
       }
       return keysToCamel(data) as User;
-  };
+  }, []);
 
   useEffect(() => {
     // This function handles all logic for setting up the app when a session is active.
     const setupSession = async (session: any) => {
+      try {
         const userProfile = await fetchUserProfile(session.user.id);
 
         if (userProfile) {
             // Fetch all application data BEFORE setting the user. This prevents the UI
-            // from attempting to render a dashboard with incomplete or empty data,
-            // which resolves the race condition.
+            // from attempting to render a dashboard with incomplete or empty data.
             await fetchData();
             setCurrentUser(userProfile);
         } else {
@@ -104,30 +104,31 @@ const AppContent: React.FC = () => {
             console.error(`User with ID ${session.user.id} is authenticated but has no profile.`);
             await supabase.auth.signOut();
         }
+      } catch (error) {
+          console.error("Error setting up session:", error);
+          await supabase.auth.signOut(); // Sign out on any setup error
+      }
     };
 
-    // Check for active session on initial load
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // The onAuthStateChange listener is the single source of truth for auth state.
+    // It fires once on initial load, and again on SIGNED_IN/SIGNED_OUT events.
+    // This replaces the need for a separate getSession() call and prevents race conditions.
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session) {
             await setupSession(session);
-        }
-        setCheckingStatus(false);
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-            await setupSession(session);
-        } else if (event === 'SIGNED_OUT') {
+        } else {
             setCurrentUser(null);
             setActiveParcel(null);
-            clearData(); // Clear data from context on logout
+            clearData();
         }
+        // The initial auth status check is complete after this listener fires for the first time.
+        setCheckingStatus(false);
     });
 
     return () => {
         authListener.subscription.unsubscribe();
     };
-  }, [fetchData, clearData]);
+  }, [fetchData, clearData, fetchUserProfile]);
 
 
   const handleLogin = (user: User, parcel?: Parcel) => {
