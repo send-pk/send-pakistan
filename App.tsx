@@ -90,9 +90,20 @@ const AppContent: React.FC = () => {
     // This function handles all logic for setting up the app when a session is active.
     const setupSession = async (session: any) => {
         const userProfile = await fetchUserProfile(session.user.id);
-        setCurrentUser(userProfile);
-        // We have a user, now fetch all the application data.
-        await fetchData();
+
+        if (userProfile) {
+            // Fetch all application data BEFORE setting the user. This prevents the UI
+            // from attempting to render a dashboard with incomplete or empty data,
+            // which resolves the race condition.
+            await fetchData();
+            setCurrentUser(userProfile);
+        } else {
+            // This is a critical error state: a user is authenticated with Supabase
+            // but doesn't have a corresponding profile in our `users` table.
+            // We must sign them out to prevent the app from being in a broken state.
+            console.error(`User with ID ${session.user.id} is authenticated but has no profile.`);
+            await supabase.auth.signOut();
+        }
     };
 
     // Check for active session on initial load
