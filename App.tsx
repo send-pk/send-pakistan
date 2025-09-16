@@ -5,8 +5,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import BrandDashboard from './components/client/ClientDashboard';
 import DriverApp from './components/driver/DriverApp';
 import TeamDashboard from './components/team/TeamDashboard';
-import RoleSelectorScreen from './components/RoleSelectorScreen';
-import LoginScreen from './components/LoginScreen';
+import LandingScreen from './components/LandingScreen';
 import CustomerDashboard from './components/customer/CustomerDashboard';
 import { AlertTriangleIcon } from './components/icons/AlertTriangleIcon';
 
@@ -63,7 +62,6 @@ const AppContent: React.FC = () => {
     const { users, fetchData, loading, error } = useData();
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [trackedParcel, setTrackedParcel] = useState<Parcel | null>(null);
-    const [authStep, setAuthStep] = useState<'login' | 'selectRole'>('login');
 
     useEffect(() => {
         fetchData();
@@ -92,7 +90,6 @@ const AppContent: React.FC = () => {
     const handleLogout = () => {
         setCurrentUser(null);
         setTrackedParcel(null);
-        setAuthStep('login');
     };
     
     const renderContent = () => {
@@ -116,10 +113,7 @@ const AppContent: React.FC = () => {
         }
 
         if (!currentUser) {
-            if (authStep === 'login') {
-                return <LoginScreen onShowRoleSelector={() => setAuthStep('selectRole')} onLogin={handleCustomerLogin} />;
-            }
-            return <RoleSelectorScreen onSelectRole={handleRoleSelect} />;
+            return <LandingScreen onSelectRole={handleRoleSelect} onCustomerLogin={handleCustomerLogin} />;
         }
 
         switch (currentUser.role) {
@@ -138,9 +132,9 @@ const AppContent: React.FC = () => {
                      return <CustomerDashboard user={currentUser} parcel={trackedParcel} onLogout={handleLogout} />;
                 }
                 // Fallback if parcel somehow missing
-                return <LoginScreen onShowRoleSelector={() => setAuthStep('selectRole')} onLogin={handleCustomerLogin} />;
+                return <LandingScreen onSelectRole={handleRoleSelect} onCustomerLogin={handleCustomerLogin} />;
             default:
-                 return <RoleSelectorScreen onSelectRole={handleRoleSelect} />;
+                 return <LandingScreen onSelectRole={handleRoleSelect} onCustomerLogin={handleCustomerLogin} />;
         }
     };
 
