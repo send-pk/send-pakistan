@@ -75,44 +75,48 @@ const AppContent: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeParcel, setActiveParcel] = useState<Parcel | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(true);
-  const { loading: isDataLoading } = useData();
+  const { loading: isDataLoading, fetchData, clearData } = useData();
+
+  const fetchUserProfile = async (userId: string): Promise<User | null> => {
+      const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+      if (error || !data) {
+          console.error('Error fetching user profile:', error?.message);
+          return null;
+      }
+      return keysToCamel(data) as User;
+  };
 
   useEffect(() => {
-    const fetchUserProfile = async (userId: string): Promise<User | null> => {
-        const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
-        if (error || !data) {
-            console.error('Error fetching user profile:', error?.message);
-            return null;
-        }
-        return keysToCamel(data) as User;
+    // This function handles all logic for setting up the app when a session is active.
+    const setupSession = async (session: any) => {
+        const userProfile = await fetchUserProfile(session.user.id);
+        setCurrentUser(userProfile);
+        // We have a user, now fetch all the application data.
+        await fetchData();
     };
 
     // Check for active session on initial load
     supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session) {
-            const userProfile = await fetchUserProfile(session.user.id);
-            setCurrentUser(userProfile);
+            await setupSession(session);
         }
         setCheckingStatus(false);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_IN' && session) {
+            await setupSession(session);
+        } else if (event === 'SIGNED_OUT') {
             setCurrentUser(null);
             setActiveParcel(null);
-        } else if (session) {
-            const userProfile = await fetchUserProfile(session.user.id);
-            setCurrentUser(userProfile);
-            // If there's a session but no profile, they will be logged in but can't see anything.
-            // This is better than logging them out, as their profile might be created shortly after.
-            // The UI will handle the null currentUser state correctly.
+            clearData(); // Clear data from context on logout
         }
     });
 
     return () => {
         authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchData, clearData]);
 
 
   const handleLogin = (user: User, parcel?: Parcel) => {
@@ -130,7 +134,6 @@ const AppContent: React.FC = () => {
 
   const renderContent = () => {
     // Show loader while checking auth status OR while the main app data is loading.
-    // This ensures dashboards have the data they need from DataContext before rendering.
     if (checkingStatus || isDataLoading) {
         return (
             <div className="flex justify-center items-center h-screen">

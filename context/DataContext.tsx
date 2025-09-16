@@ -46,6 +46,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState<boolean>(false);
 
     const fetchData = useCallback(async () => {
+        setLoading(true);
         try {
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -75,7 +76,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             
         } catch (error) {
             console.error("Data fetching error:", error);
+        } finally {
+            setLoading(false);
         }
+    }, []);
+    
+    const clearData = useCallback(() => {
+        setParcels([]);
+        setUsers([]);
+        setInvoices([]);
+        setSalaryPayments([]);
+        setLoading(false);
     }, []);
 
     useEffect(() => {
@@ -91,24 +102,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             })
             .subscribe();
 
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (session) {
-                // A session exists, show loader and fetch data.
-                setLoading(true);
-                await fetchData();
-                setLoading(false);
-            } else {
-                // No session, clear all data and stop loading.
-                setParcels([]);
-                setUsers([]);
-                setInvoices([]);
-                setSalaryPayments([]);
-                setLoading(false);
-            }
-        });
+        // The onAuthStateChange listener is removed from here and is now managed in App.tsx
+        // to centralize authentication logic.
 
         return () => {
-            authListener.subscription.unsubscribe();
             supabase.removeChannel(channel);
         };
     }, [fetchData]);
@@ -201,6 +198,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     const value: DataContextType = useMemo(() => ({
         parcels, users, invoices, salaryPayments, loading,
+        fetchData,
+        clearData,
         updateParcelStatus,
         updateMultipleParcelStatuses: async (parcelIds, status, currentUser, details) => {
             const updates = parcelIds.map(id => {
@@ -472,7 +471,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const { error } = await supabase.from('salary_payments').insert(keysToSnake({ ...paymentData, status: 'PAID', paidAt: new Date().toISOString() }));
             if (error) console.error("Error marking salary as paid:", error); else await fetchData();
         }
-    }), [parcels, users, invoices, salaryPayments, loading, fetchData, updateParcelStatus]);
+    }), [parcels, users, invoices, salaryPayments, loading, fetchData, clearData, updateParcelStatus]);
 
     return (
         <DataContext.Provider value={value}>
