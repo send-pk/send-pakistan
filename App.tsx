@@ -1,13 +1,13 @@
 import React, { useState, createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { User, UserRole, Parcel } from './types';
 import { DataProvider, useData } from './context/DataContext';
-import LoginScreen from './components/LoginScreen';
-import CustomerDashboard from './components/customer/CustomerDashboard';
 import AdminDashboard from './components/admin/AdminDashboard';
 import BrandDashboard from './components/client/ClientDashboard';
 import DriverApp from './components/driver/DriverApp';
-import { supabase } from './supabase';
-import { Button } from './components/shared/Button';
+import TeamDashboard from './components/team/TeamDashboard';
+import RoleSelectorScreen from './components/RoleSelectorScreen';
+import LoginScreen from './components/LoginScreen';
+import CustomerDashboard from './components/customer/CustomerDashboard';
 import { AlertTriangleIcon } from './components/icons/AlertTriangleIcon';
 
 type Theme = 'light' | 'dark';
@@ -59,299 +59,185 @@ export const useTheme = () => {
     return context;
 };
 
-// Case conversion helpers for fetching user profile
-const toCamel = (s: string): string => s.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
-const isObject = (obj: any): boolean => obj === Object(obj) && !Array.isArray(obj) && typeof obj !== 'function';
-const keysToCamel = (obj: any): any => {
-  if (isObject(obj)) {
-    const n: { [key: string]: any } = {};
-    Object.keys(obj).forEach((k) => { n[toCamel(k)] = keysToCamel(obj[k]); });
-    return n;
-  } else if (Array.isArray(obj)) {
-    return obj.map((i) => keysToCamel(i));
-  }
-  return obj;
-};
-
 const AppContent: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activeParcel, setActiveParcel] = useState<Parcel | null>(null);
-  const [checkingStatus, setCheckingStatus] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const { clearData } = useData();
+    const { users, fetchData, loading, error } = useData();
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [trackedParcel, setTrackedParcel] = useState<Parcel | null>(null);
+    const [authStep, setAuthStep] = useState<'login' | 'selectRole'>('login');
 
-  // --- HASH-BASED ROUTING IMPLEMENTATION ---
-  const getPathFromHash = () => window.location.hash.substring(1) || '/';
-  const [path, setPath] = useState(getPathFromHash());
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
-  const navigate = useCallback((newPath: string) => {
-    const currentPath = getPathFromHash();
-    if (currentPath !== newPath) {
-        window.location.hash = newPath;
-    }
-  }, []);
-
-  useEffect(() => {
-    const onLocationChange = () => {
-        setPath(getPathFromHash());
-    };
-    window.addEventListener('hashchange', onLocationChange);
-    return () => {
-        window.removeEventListener('hashchange', onLocationChange);
-    };
-  }, []);
-  // --- END HASH-BASED ROUTING ---
-
-  const fetchUserProfile = useCallback(async (userId: string): Promise<User | null> => {
-      const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
-      if (error || !data) {
-          console.error('Error fetching user profile:', error?.message);
-          return null;
-      }
-      return keysToCamel(data) as User;
-  }, []);
-
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        // Clear previous auth errors ONLY when a new sign-in attempt is confirmed.
-        if (event === 'SIGNED_IN') {
-             setAuthError(null);
+    const handleRoleSelect = (role: UserRole) => {
+        let userToLogin: User | undefined;
+        if (role === UserRole.BRAND) {
+            userToLogin = users.find(u => u.role === role && u.pickupLocations && u.pickupLocations.length > 0) || users.find(u => u.role === role);
+        } else {
+            userToLogin = users.find(u => u.role === role);
         }
 
-        if (session) {
-            const userProfile = await fetchUserProfile(session.user.id);
-            if (userProfile) {
-                // Success: clear any lingering errors and set user
-                setAuthError(null);
-                setCurrentUser(userProfile);
-            } else {
-                // Critical failure: profile not found.
-                if (event !== 'INITIAL_SESSION') {
-                    console.error(`User with ID ${session.user.id} is authenticated but has no profile. Signing out.`);
-                    setAuthError("Your account is valid, but we couldn't load your user profile, which is required to use the app. This may be a setup issue. You have been logged out.");
-                    await supabase.auth.signOut();
-                } else {
-                    // On initial page load with a stale session, if profile fails, don't sign out.
-                    // Let the user see the error and log out manually if needed.
-                    console.error(`Could not fetch profile for existing session user ID ${session.user.id}.`);
-                    setAuthError("We couldn't load your profile from your previous session. Please try logging out and back in.");
-                    setCurrentUser(null);
-                }
-            }
-        } else { // No session
-            setCurrentUser(null);
-            setActiveParcel(null);
-            clearData();
+        if (userToLogin) {
+            setCurrentUser(userToLogin);
+        } else {
+            alert(`No user with the role "${role}" was found in the database. Please add one to proceed.`);
         }
-        setCheckingStatus(false);
-    });
-
-    return () => {
-        authListener.subscription.unsubscribe();
     };
-  }, [fetchUserProfile, clearData]);
-
-  // Effect for role-based path routing
-  useEffect(() => {
-    if (checkingStatus || authError) return; // Wait for auth check and ensure no login error
-
-    if (currentUser) {
-      let targetPath = '';
-      switch (currentUser.role) {
-        case UserRole.ADMIN:
-        case UserRole.WAREHOUSE_MANAGER:
-        case UserRole.SALES_MANAGER:
-        case UserRole.DIRECT_SALES:
-          targetPath = '/admin';
-          break;
-        case UserRole.BRAND:
-          targetPath = '/brand';
-          break;
-        case UserRole.DRIVER:
-          targetPath = '/driver';
-          break;
-        case UserRole.CUSTOMER:
-          targetPath = '/';
-          break;
-        default:
-          console.warn(`No path configured for role: ${currentUser.role}`);
-          targetPath = '/';
-          break;
-      }
-      navigate(targetPath);
-    } else {
-      // If logged out, go to login screen
-      navigate('/'); 
-    }
-  }, [currentUser, checkingStatus, navigate, authError]);
-
-
-  const handleLogin = (user: User, parcel?: Parcel) => {
-    // This handler is specifically for the customer tracking flow.
-    setCurrentUser(user);
-    if(parcel) {
-        setActiveParcel(parcel);
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setAuthError(null); // Clear auth error on manual logout
-    // The onAuthStateChange listener will handle clearing user state & navigation.
-  };
-
-  const renderContent = () => {
-    if (checkingStatus) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-            </div>
-        );
-    }
-
-    if (!currentUser) {
-      return <LoginScreen onLogin={handleLogin} authError={authError} />;
-    }
     
-    // Path-based rendering for logged-in users
-    switch (path) {
-        case '/admin':
-            if ([UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.SALES_MANAGER, UserRole.DIRECT_SALES].includes(currentUser.role)) {
-                return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
-            }
-            break;
-        case '/brand':
-            if (currentUser.role === UserRole.BRAND) {
-                return <BrandDashboard user={currentUser} onLogout={handleLogout} />;
-            }
-            break;
-        case '/driver':
-            if (currentUser.role === UserRole.DRIVER) {
-                return <DriverApp user={currentUser} onLogout={handleLogout} />;
-            }
-            break;
-        case '/':
-            if (currentUser.role === UserRole.CUSTOMER) {
-                if (activeParcel) {
-                    return <CustomerDashboard user={currentUser} parcel={activeParcel} onLogout={handleLogout} />;
-                }
-                return <LoginScreen onLogin={handleLogin} authError={authError} />;
-            }
-             // For other roles, show a loading spinner while the useEffect navigates them
+    const handleCustomerLogin = (user: User, parcel: Parcel) => {
+        setCurrentUser(user);
+        setTrackedParcel(parcel);
+    };
+
+    const handleLogout = () => {
+        setCurrentUser(null);
+        setTrackedParcel(null);
+        setAuthStep('login');
+    };
+    
+    const renderContent = () => {
+        if (loading) {
             return (
-                 <div className="flex flex-col justify-center items-center h-screen">
+                <div className="flex flex-col justify-center items-center h-screen">
                     <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-                    <p className="mt-4 text-lg text-content-secondary">Loading your dashboard...</p>
+                    <p className="mt-4 text-lg text-content-secondary">Loading Application Data...</p>
                 </div>
             );
-        default:
-             // A non-matching path was entered manually. The useEffect will redirect.
-            break;
-    }
-    
-    // Fallback for unauthorized access to a path, or a 404.
-    return (
-        <div className="flex flex-col justify-center items-center h-screen">
-            <p className="text-lg text-content-secondary">Invalid page or insufficient permissions.</p>
-            <p className="mt-2 text-content-muted">Redirecting...</p>
-        </div>
-    );
-  };
+        }
 
-  return (
-    <>
-       <style>
-        {`
-          @media print {
-            @page {
-              size: A4 portrait;
-              margin: 1cm;
+        if (error) {
+            return (
+                 <div className="flex flex-col justify-center items-center h-screen text-center p-4">
+                    <AlertTriangleIcon className="w-12 h-12 text-red-500 mb-4" />
+                    <h2 className="text-xl font-bold text-content-primary mb-2">Error Loading Data</h2>
+                    <p className="text-content-secondary mb-4 max-w-md">{error}</p>
+                 </div>
+            );
+        }
+
+        if (!currentUser) {
+            if (authStep === 'login') {
+                return <LoginScreen onShowRoleSelector={() => setAuthStep('selectRole')} onLogin={handleCustomerLogin} />;
             }
-            body * {
-              visibility: hidden;
-            }
-            .printable-area, .printable-area * {
-              visibility: visible;
-            }
-            .printable-area {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              color: #000;
-            }
-            /* General Print Typography & Tables */
-            .printable-area table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 24px;
-                font-size: 10pt;
-            }
-            .printable-area th, .printable-area td {
-                border: 1px solid #999;
-                padding: 6px;
-                text-align: left;
-            }
-            .printable-area thead th {
-                background-color: #eee;
-                font-weight: bold;
-            }
-            .printable-area .text-right {
-                text-align: right;
-            }
-            .printable-area .font-bold {
-                font-weight: bold;
-            }
-            /* Salary Report Specific Styles */
-            .printable-area .sub-row > td {
-                padding-left: 24px;
-                border: none;
-                font-size: 9pt;
-                color: #333;
-            }
-             .printable-area .total-row > td {
-                font-weight: bold;
-                border-top: 2px solid #000;
-                background-color: #f9f9f9;
-             }
-            /* Styles for joint AWB printing */
-            .joint-awb-container {
-              display: block; /* Override flex */
-            }
-            .single-awb-wrapper {
-              height: auto; /* Override height to let content size it */
-              width: 100%;
-              page-break-inside: avoid;
-              padding: 0; /* Remove padding which can cause overflow */
-              margin-bottom: 0.05cm; /* Add tiny spacing between AWBs */
-            }
-            .awb-print-size {
-              box-sizing: border-box; /* Ensure padding is included in dimensions */
-              height: 9.5cm; /* Explicit height for print */
-              width: 19cm; /* Explicit width for print */
-              margin: 0 auto; /* Center horizontally on the page */
-              /* Override inline/tailwind styles for print */
-              aspect-ratio: auto !important;
-              max-width: none !important;
-            }
-            .no-print {
-              display: none !important;
-            }
-            /* Styles for multi-page invoices */
-            thead {
-                display: table-header-group;
-            }
-            tbody tr, tfoot {
-                page-break-inside: avoid;
-            }
-          }
-        `}
-      </style>
-      <div className="min-h-screen bg-background text-content-primary">
-        {renderContent()}
-      </div>
-    </>
-  );
+            return <RoleSelectorScreen onSelectRole={handleRoleSelect} />;
+        }
+
+        switch (currentUser.role) {
+            case UserRole.ADMIN:
+            case UserRole.WAREHOUSE_MANAGER:
+                return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
+            case UserRole.BRAND:
+                return <BrandDashboard user={currentUser} onLogout={handleLogout} />;
+            case UserRole.DRIVER:
+                return <DriverApp user={currentUser} onLogout={handleLogout} />;
+            case UserRole.SALES_MANAGER:
+            case UserRole.DIRECT_SALES:
+                 return <TeamDashboard user={currentUser} onLogout={handleLogout} />;
+            case UserRole.CUSTOMER:
+                if (trackedParcel) {
+                     return <CustomerDashboard user={currentUser} parcel={trackedParcel} onLogout={handleLogout} />;
+                }
+                // Fallback if parcel somehow missing
+                return <LoginScreen onShowRoleSelector={() => setAuthStep('selectRole')} onLogin={handleCustomerLogin} />;
+            default:
+                 return <RoleSelectorScreen onSelectRole={handleRoleSelect} />;
+        }
+    };
+
+    return (
+        <>
+           <style>
+            {`
+              @media print {
+                @page {
+                  size: A4 portrait;
+                  margin: 1cm;
+                }
+                body * {
+                  visibility: hidden;
+                }
+                .printable-area, .printable-area * {
+                  visibility: visible;
+                }
+                .printable-area {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                  color: #000;
+                }
+                /* General Print Typography & Tables */
+                .printable-area table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 24px;
+                    font-size: 10pt;
+                }
+                .printable-area th, .printable-area td {
+                    border: 1px solid #999;
+                    padding: 6px;
+                    text-align: left;
+                }
+                .printable-area thead th {
+                    background-color: #eee;
+                    font-weight: bold;
+                }
+                .printable-area .text-right {
+                    text-align: right;
+                }
+                .printable-area .font-bold {
+                    font-weight: bold;
+                }
+                /* Salary Report Specific Styles */
+                .printable-area .sub-row > td {
+                    padding-left: 24px;
+                    border: none;
+                    font-size: 9pt;
+                    color: #333;
+                }
+                 .printable-area .total-row > td {
+                    font-weight: bold;
+                    border-top: 2px solid #000;
+                    background-color: #f9f9f9;
+                 }
+                /* Styles for joint AWB printing */
+                .joint-awb-container {
+                  display: block; /* Override flex */
+                }
+                .single-awb-wrapper {
+                  height: auto; /* Override height to let content size it */
+                  width: 100%;
+                  page-break-inside: avoid;
+                  padding: 0; /* Remove padding which can cause overflow */
+                  margin-bottom: 0.05cm; /* Add tiny spacing between AWBs */
+                }
+                .awb-print-size {
+                  box-sizing: border-box; /* Ensure padding is included in dimensions */
+                  height: 9.5cm; /* Explicit height for print */
+                  width: 19cm; /* Explicit width for print */
+                  margin: 0 auto; /* Center horizontally on the page */
+                  /* Override inline/tailwind styles for print */
+                  aspect-ratio: auto !important;
+                  max-width: none !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+                /* Styles for multi-page invoices */
+                thead {
+                    display: table-header-group;
+                }
+                tbody tr, tfoot {
+                    page-break-inside: avoid;
+                }
+              }
+            `}
+          </style>
+          <div className="min-h-screen bg-background text-content-primary">
+            {renderContent()}
+          </div>
+        </>
+    );
 };
 
 
