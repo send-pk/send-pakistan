@@ -79,8 +79,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     useEffect(() => {
-        // Set loading to true initially. The auth listener will set it to false
-        // once the session status is known. This prevents content from flashing.
         setLoading(true);
 
         const channel = supabase.channel('db-changes')
@@ -97,8 +95,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session) {
-                // A session exists, so fetch the necessary data.
-                // setLoading is already true on initial check.
+                // A session exists, show loader and fetch data.
+                setLoading(true);
                 await fetchData();
                 setLoading(false);
             } else {
