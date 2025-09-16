@@ -79,27 +79,40 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     useEffect(() => {
-        let isMounted = true;
-        const initialLoad = async () => {
-            if (!isMounted) return;
-            setLoading(true);
-            await fetchData();
-            if (isMounted) {
-                setLoading(false);
-            }
-        };
-
-        initialLoad();
+        // Set loading to true initially. The auth listener will set it to false
+        // once the session status is known. This prevents content from flashing.
+        setLoading(true);
 
         const channel = supabase.channel('db-changes')
             .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
                 console.log('Realtime change received!', payload);
-                fetchData();
+                // Refetch data only if there's an active session
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session) {
+                        fetchData();
+                    }
+                });
             })
             .subscribe();
 
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session) {
+                // A session exists, so fetch the necessary data.
+                // setLoading is already true on initial check.
+                await fetchData();
+                setLoading(false);
+            } else {
+                // No session, clear all data and stop loading.
+                setParcels([]);
+                setUsers([]);
+                setInvoices([]);
+                setSalaryPayments([]);
+                setLoading(false);
+            }
+        });
+
         return () => {
-            isMounted = false;
+            authListener.subscription.unsubscribe();
             supabase.removeChannel(channel);
         };
     }, [fetchData]);
