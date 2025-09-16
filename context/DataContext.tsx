@@ -76,6 +76,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             
         } catch (error) {
             console.error("Data fetching error:", error);
+            // Re-throw the error so the calling function (e.g., in App.tsx) can handle it.
+            // This prevents the app from entering a broken state with a logged-in user but no data.
+            throw error;
         } finally {
             setLoading(false);
         }
