@@ -43,7 +43,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [users, setUsers] = useState<User[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const fetchData = useCallback(async () => {
         try {
@@ -79,8 +79,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     useEffect(() => {
-        setLoading(true);
-
         const channel = supabase.channel('db-changes')
             .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
                 console.log('Realtime change received!', payload);
