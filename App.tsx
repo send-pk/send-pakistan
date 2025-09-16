@@ -3,6 +3,9 @@ import { User, UserRole, Parcel } from './types';
 import { DataProvider, useData } from './context/DataContext';
 import LoginScreen from './components/LoginScreen';
 import CustomerDashboard from './components/customer/CustomerDashboard';
+import AdminDashboard from './components/admin/AdminDashboard';
+import BrandDashboard from './components/client/ClientDashboard';
+import DriverApp from './components/driver/DriverApp';
 import { supabase } from './supabase';
 
 type Theme = 'light' | 'dark';
@@ -74,6 +77,33 @@ const AppContent: React.FC = () => {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const { clearData } = useData();
 
+  // --- HASH-BASED ROUTING IMPLEMENTATION ---
+  // Gets the path from the hash, e.g., from '#/admin' it returns '/admin'
+  // If hash is empty or just '#', it returns '/'
+  const getPathFromHash = () => window.location.hash.substring(1) || '/';
+  const [path, setPath] = useState(getPathFromHash());
+
+  const navigate = useCallback((newPath: string) => {
+    // We expect newPath to be like '/admin' or '/'
+    const currentPath = getPathFromHash();
+    if (currentPath !== newPath) {
+        // This will change the URL to '.../#/admin' which triggers the hashchange event
+        window.location.hash = newPath;
+    }
+  }, []);
+
+  useEffect(() => {
+    const onLocationChange = () => {
+        setPath(getPathFromHash());
+    };
+    // Listen for hash changes to update the path state
+    window.addEventListener('hashchange', onLocationChange);
+    return () => {
+        window.removeEventListener('hashchange', onLocationChange);
+    };
+  }, []);
+  // --- END HASH-BASED ROUTING ---
+
   const fetchUserProfile = useCallback(async (userId: string): Promise<User | null> => {
       const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
       if (error || !data) {
@@ -83,7 +113,6 @@ const AppContent: React.FC = () => {
       return keysToCamel(data) as User;
   }, []);
 
-  // Effect to handle authentication state changes
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session) {
@@ -107,35 +136,39 @@ const AppContent: React.FC = () => {
     };
   }, [fetchUserProfile, clearData]);
 
-  // Effect for role-based redirection
+  // Effect for role-based path routing
   useEffect(() => {
-    if (currentUser && currentUser.role !== UserRole.CUSTOMER) {
-      let redirectUrl = '';
+    if (checkingStatus) return; // Wait for auth check
+
+    if (currentUser) {
+      let targetPath = '';
       switch (currentUser.role) {
         case UserRole.ADMIN:
         case UserRole.WAREHOUSE_MANAGER:
-          redirectUrl = 'https://admin.send.com.pk';
-          break;
-        case UserRole.BRAND:
-          redirectUrl = 'https://brand.send.com.pk';
-          break;
-        case UserRole.DRIVER:
-          redirectUrl = 'https://driver.send.com.pk';
-          break;
         case UserRole.SALES_MANAGER:
         case UserRole.DIRECT_SALES:
-          redirectUrl = 'https://team.send.com.pk';
+          targetPath = '/admin';
+          break;
+        case UserRole.BRAND:
+          targetPath = '/brand';
+          break;
+        case UserRole.DRIVER:
+          targetPath = '/driver';
+          break;
+        case UserRole.CUSTOMER:
+          targetPath = '/';
           break;
         default:
-          console.warn(`No redirect configured for role: ${currentUser.role}`);
+          console.warn(`No path configured for role: ${currentUser.role}`);
+          targetPath = '/';
           break;
       }
-
-      if (redirectUrl) {
-        window.location.href = redirectUrl;
-      }
+      navigate(targetPath);
+    } else {
+      // If logged out, go to login screen
+      navigate('/'); 
     }
-  }, [currentUser]);
+  }, [currentUser, checkingStatus, navigate]);
 
 
   const handleLogin = (user: User, parcel?: Parcel) => {
@@ -148,11 +181,10 @@ const AppContent: React.FC = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    // The onAuthStateChange listener will handle clearing user state.
+    // The onAuthStateChange listener will handle clearing user state & navigation.
   };
 
   const renderContent = () => {
-    // Initial status check loader
     if (checkingStatus) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -161,26 +193,52 @@ const AppContent: React.FC = () => {
         );
     }
 
-    // Login screen if not authenticated
     if (!currentUser) {
       return <LoginScreen onLogin={handleLogin} />;
     }
-
-    // Customer dashboard for tracking flow
-    if (currentUser.role === UserRole.CUSTOMER) {
-      if (activeParcel) {
-          return <CustomerDashboard user={currentUser} parcel={activeParcel} onLogout={handleLogout} />;
-      }
-      // Fallback if customer is logged in without a parcel
-      return <LoginScreen onLogin={handleLogin} />;
+    
+    // Path-based rendering for logged-in users
+    switch (path) {
+        case '/admin':
+            if ([UserRole.ADMIN, UserRole.WAREHOUSE_MANAGER, UserRole.SALES_MANAGER, UserRole.DIRECT_SALES].includes(currentUser.role)) {
+                return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
+            }
+            break;
+        case '/brand':
+            if (currentUser.role === UserRole.BRAND) {
+                return <BrandDashboard user={currentUser} onLogout={handleLogout} />;
+            }
+            break;
+        case '/driver':
+            if (currentUser.role === UserRole.DRIVER) {
+                return <DriverApp user={currentUser} onLogout={handleLogout} />;
+            }
+            break;
+        case '/':
+            if (currentUser.role === UserRole.CUSTOMER) {
+                if (activeParcel) {
+                    return <CustomerDashboard user={currentUser} parcel={activeParcel} onLogout={handleLogout} />;
+                }
+                // Fallback for customer without a parcel (e.g. after logout/login)
+                return <LoginScreen onLogin={handleLogin} />;
+            }
+             // For other roles, show a loading spinner while the useEffect navigates them
+            return (
+                 <div className="flex flex-col justify-center items-center h-screen">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+                    <p className="mt-4 text-lg text-content-secondary">Loading your dashboard...</p>
+                </div>
+            );
+        default:
+             // A non-matching path was entered manually. The useEffect will redirect.
+            break;
     }
     
-    // For all other logged-in users, show a redirecting message
-    // while the redirection useEffect does its work.
+    // Fallback for unauthorized access to a path, or a 404.
     return (
         <div className="flex flex-col justify-center items-center h-screen">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-            <p className="mt-4 text-lg text-content-secondary">Redirecting to your dashboard...</p>
+            <p className="text-lg text-content-secondary">Invalid page or insufficient permissions.</p>
+            <p className="mt-2 text-content-muted">Redirecting...</p>
         </div>
     );
   };
