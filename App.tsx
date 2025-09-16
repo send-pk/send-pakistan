@@ -1,9 +1,6 @@
 import React, { useState, createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { User, UserRole, Parcel } from './types';
 import { DataProvider, useData } from './context/DataContext';
-import AdminDashboard from './components/admin/AdminDashboard';
-import BrandDashboard from './components/client/ClientDashboard';
-import DriverApp from './components/driver/DriverApp';
 import LoginScreen from './components/LoginScreen';
 import CustomerDashboard from './components/customer/CustomerDashboard';
 import { supabase } from './supabase';
@@ -75,7 +72,7 @@ const AppContent: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeParcel, setActiveParcel] = useState<Parcel | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(true);
-  const { fetchData, clearData } = useData();
+  const { clearData } = useData();
 
   const fetchUserProfile = useCallback(async (userId: string): Promise<User | null> => {
       const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
@@ -88,18 +85,12 @@ const AppContent: React.FC = () => {
 
   // Effect to handle authentication state changes
   useEffect(() => {
-    // The onAuthStateChange listener is the single source of truth for auth state.
-    // It fires once on initial load, and again on SIGNED_IN/SIGNED_OUT events.
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session) {
             const userProfile = await fetchUserProfile(session.user.id);
             if (userProfile) {
-                // Set the user immediately. The data fetching will be triggered
-                // by the other useEffect hook that depends on `currentUser`.
                 setCurrentUser(userProfile);
             } else {
-                // This is a critical error state: a user is authenticated with Supabase
-                // but doesn't have a corresponding profile in our `users` table.
                 console.error(`User with ID ${session.user.id} is authenticated but has no profile.`);
                 await supabase.auth.signOut();
             }
@@ -108,7 +99,6 @@ const AppContent: React.FC = () => {
             setActiveParcel(null);
             clearData();
         }
-        // The initial auth status check is complete after this listener fires for the first time.
         setCheckingStatus(false);
     });
 
@@ -117,19 +107,39 @@ const AppContent: React.FC = () => {
     };
   }, [fetchUserProfile, clearData]);
 
-  // Effect to fetch application data once a user is authenticated and set
+  // Effect for role-based redirection
   useEffect(() => {
-    if (currentUser) {
-        // Data fetching errors are now handled within the DataContext itself,
-        // preventing the app from signing out the user on a data failure.
-        fetchData();
+    if (currentUser && currentUser.role !== UserRole.CUSTOMER) {
+      let redirectUrl = '';
+      switch (currentUser.role) {
+        case UserRole.ADMIN:
+        case UserRole.WAREHOUSE_MANAGER:
+          redirectUrl = 'https://admin.send.com.pk';
+          break;
+        case UserRole.BRAND:
+          redirectUrl = 'https://brand.send.com.pk';
+          break;
+        case UserRole.DRIVER:
+          redirectUrl = 'https://driver.send.com.pk';
+          break;
+        case UserRole.SALES_MANAGER:
+        case UserRole.DIRECT_SALES:
+          redirectUrl = 'https://team.send.com.pk';
+          break;
+        default:
+          console.warn(`No redirect configured for role: ${currentUser.role}`);
+          break;
+      }
+
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+      }
     }
-  }, [currentUser, fetchData]);
+  }, [currentUser]);
 
 
   const handleLogin = (user: User, parcel?: Parcel) => {
-    // This handler is specifically for the customer tracking flow, which doesn't
-    // require a full data load.
+    // This handler is specifically for the customer tracking flow.
     setCurrentUser(user);
     if(parcel) {
         setActiveParcel(parcel);
@@ -142,8 +152,7 @@ const AppContent: React.FC = () => {
   };
 
   const renderContent = () => {
-    // Show a loader only while checking the initial authentication status.
-    // The dashboard component itself will handle the data loading state.
+    // Initial status check loader
     if (checkingStatus) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -152,33 +161,28 @@ const AppContent: React.FC = () => {
         );
     }
 
+    // Login screen if not authenticated
     if (!currentUser) {
       return <LoginScreen onLogin={handleLogin} />;
     }
 
-    // As requested, forcing the Admin Dashboard to load for any logged-in user.
-    // The original role-based routing logic is preserved in comments below.
-    return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
-    
-    /*
-    switch (currentUser.role) {
-      case UserRole.ADMIN:
-      case UserRole.WAREHOUSE_MANAGER:
-        return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
-      case UserRole.BRAND:
-        return <BrandDashboard user={currentUser} onLogout={handleLogout} />;
-      case UserRole.DRIVER:
-        return <DriverApp user={currentUser} onLogout={handleLogout} />;
-      case UserRole.CUSTOMER:
-        if (activeParcel) {
-            return <CustomerDashboard user={currentUser} parcel={activeParcel} onLogout={handleLogout} />;
-        }
-        // Fallback if customer is logged in but parcel is missing
-        return <LoginScreen onLogin={handleLogin} />;
-      default:
-        return <LoginScreen onLogin={handleLogin} />;
+    // Customer dashboard for tracking flow
+    if (currentUser.role === UserRole.CUSTOMER) {
+      if (activeParcel) {
+          return <CustomerDashboard user={currentUser} parcel={activeParcel} onLogout={handleLogout} />;
+      }
+      // Fallback if customer is logged in without a parcel
+      return <LoginScreen onLogin={handleLogin} />;
     }
-    */
+    
+    // For all other logged-in users, show a redirecting message
+    // while the redirection useEffect does its work.
+    return (
+        <div className="flex flex-col justify-center items-center h-screen">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+            <p className="mt-4 text-lg text-content-secondary">Redirecting to your dashboard...</p>
+        </div>
+    );
   };
 
   return (
