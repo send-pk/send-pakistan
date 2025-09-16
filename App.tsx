@@ -86,36 +86,23 @@ const AppContent: React.FC = () => {
       return keysToCamel(data) as User;
   }, []);
 
+  // Effect to handle authentication state changes
   useEffect(() => {
-    // This function handles all logic for setting up the app when a session is active.
-    const setupSession = async (session: any) => {
-      try {
-        const userProfile = await fetchUserProfile(session.user.id);
-
-        if (userProfile) {
-            // Fetch all application data BEFORE setting the user. This prevents the UI
-            // from attempting to render a dashboard with incomplete or empty data.
-            await fetchData();
-            setCurrentUser(userProfile);
-        } else {
-            // This is a critical error state: a user is authenticated with Supabase
-            // but doesn't have a corresponding profile in our `users` table.
-            // We must sign them out to prevent the app from being in a broken state.
-            console.error(`User with ID ${session.user.id} is authenticated but has no profile.`);
-            await supabase.auth.signOut();
-        }
-      } catch (error) {
-          console.error("Error setting up session:", error);
-          await supabase.auth.signOut(); // Sign out on any setup error
-      }
-    };
-
     // The onAuthStateChange listener is the single source of truth for auth state.
     // It fires once on initial load, and again on SIGNED_IN/SIGNED_OUT events.
-    // This replaces the need for a separate getSession() call and prevents race conditions.
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session) {
-            await setupSession(session);
+            const userProfile = await fetchUserProfile(session.user.id);
+            if (userProfile) {
+                // Set the user immediately. The data fetching will be triggered
+                // by the other useEffect hook that depends on `currentUser`.
+                setCurrentUser(userProfile);
+            } else {
+                // This is a critical error state: a user is authenticated with Supabase
+                // but doesn't have a corresponding profile in our `users` table.
+                console.error(`User with ID ${session.user.id} is authenticated but has no profile.`);
+                await supabase.auth.signOut();
+            }
         } else {
             setCurrentUser(null);
             setActiveParcel(null);
@@ -128,10 +115,22 @@ const AppContent: React.FC = () => {
     return () => {
         authListener.subscription.unsubscribe();
     };
-  }, [fetchData, clearData, fetchUserProfile]);
+  }, [fetchUserProfile, clearData]);
+
+  // Effect to fetch application data once a user is authenticated and set
+  useEffect(() => {
+    if (currentUser) {
+        fetchData().catch(error => {
+            console.error("A critical error occurred while fetching application data. Signing out to prevent a broken state.", error);
+            supabase.auth.signOut();
+        });
+    }
+  }, [currentUser, fetchData]);
 
 
   const handleLogin = (user: User, parcel?: Parcel) => {
+    // This handler is specifically for the customer tracking flow, which doesn't
+    // require a full data load.
     setCurrentUser(user);
     if(parcel) {
         setActiveParcel(parcel);
@@ -140,13 +139,12 @@ const AppContent: React.FC = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setCurrentUser(null);
-    setActiveParcel(null);
+    // The onAuthStateChange listener will handle clearing user state.
   };
 
   const renderContent = () => {
-    // Show loader while checking auth status OR while the main app data is loading.
-    if (checkingStatus || isDataLoading) {
+    // Show loader while checking initial auth status OR while fetching data for a logged-in user.
+    if (checkingStatus || (currentUser && isDataLoading)) {
         return (
             <div className="flex justify-center items-center h-screen">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
