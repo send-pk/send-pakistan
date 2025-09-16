@@ -5,9 +5,24 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import BrandDashboard from './components/client/ClientDashboard';
 import DriverApp from './components/driver/DriverApp';
 import TeamDashboard from './components/team/TeamDashboard';
-import LandingScreen from './components/LandingScreen';
+import LoginScreen from './components/LoginScreen';
 import CustomerDashboard from './components/customer/CustomerDashboard';
+import { supabase } from './supabase';
 import { AlertTriangleIcon } from './components/icons/AlertTriangleIcon';
+
+// Case conversion helpers to map between JS camelCase and Postgres snake_case
+const toCamel = (s: string): string => s.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
+const isObject = (obj: any): boolean => obj === Object(obj) && !Array.isArray(obj) && typeof obj !== 'function';
+const keysToCamel = (obj: any): any => {
+  if (isObject(obj)) {
+    const n: { [key: string]: any } = {};
+    Object.keys(obj).forEach((k) => { n[toCamel(k)] = keysToCamel(obj[k]); });
+    return n;
+  } else if (Array.isArray(obj)) {
+    return obj.map((i) => keysToCamel(i));
+  }
+  return obj;
+};
 
 type Theme = 'light' | 'dark';
 type ThemeContextType = {
@@ -59,61 +74,72 @@ export const useTheme = () => {
 };
 
 const AppContent: React.FC = () => {
-    const { users, fetchData, loading, error } = useData();
+    const { clearData, fetchData } = useData();
+    const [checkingStatus, setCheckingStatus] = useState(true);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [trackedParcel, setTrackedParcel] = useState<Parcel | null>(null);
+    const [authError, setAuthError] = useState<string | null>(null);
+    const [customerSession, setCustomerSession] = useState<{ user: User; parcel: Parcel } | null>(null);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            setAuthError(null);
+            if (session?.user) {
+                await fetchData();
+                const { data: profile, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+                
+                if (error || !profile) {
+                    console.error("Profile fetch error:", error);
+                    setAuthError("Your account is valid, but we couldn't load your user profile. Please contact support.");
+                    await supabase.auth.signOut();
+                    setCurrentUser(null);
+                } else {
+                    const userProfile = keysToCamel(profile) as User;
+                    // Ensure role is always uppercase for consistent checks
+                    userProfile.role = userProfile.role ? (userProfile.role.toUpperCase() as UserRole) : UserRole.CUSTOMER;
+                    setCurrentUser(userProfile);
+                }
+            } else {
+                setCurrentUser(null);
+                clearData();
+            }
+            setCheckingStatus(false);
+        });
 
-    const handleRoleSelect = (role: UserRole) => {
-        let userToLogin: User | undefined;
-        if (role === UserRole.BRAND) {
-            userToLogin = users.find(u => u.role === role && u.pickupLocations && u.pickupLocations.length > 0) || users.find(u => u.role === role);
-        } else {
-            userToLogin = users.find(u => u.role === role);
-        }
+        return () => subscription.unsubscribe();
+    }, [fetchData, clearData]);
 
-        if (userToLogin) {
-            setCurrentUser(userToLogin);
-        } else {
-            alert(`No user with the role "${role}" was found in the database. Please add one to proceed.`);
-        }
-    };
-    
     const handleCustomerLogin = (user: User, parcel: Parcel) => {
-        setCurrentUser(user);
-        setTrackedParcel(parcel);
+        setCustomerSession({ user, parcel });
     };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        const { error } = await supabase.auth.signOut();
+        if (error) console.error('Error logging out:', error);
         setCurrentUser(null);
-        setTrackedParcel(null);
+        setCustomerSession(null);
+        clearData();
     };
     
     const renderContent = () => {
-        if (loading) {
+        if (checkingStatus) {
             return (
                 <div className="flex flex-col justify-center items-center h-screen">
                     <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-                    <p className="mt-4 text-lg text-content-secondary">Loading Application Data...</p>
+                    <p className="mt-4 text-lg text-content-secondary">Checking Session...</p>
                 </div>
             );
         }
 
-        if (error) {
-            return (
-                 <div className="flex flex-col justify-center items-center h-screen text-center p-4">
-                    <AlertTriangleIcon className="w-12 h-12 text-red-500 mb-4" />
-                    <h2 className="text-xl font-bold text-content-primary mb-2">Error Loading Data</h2>
-                    <p className="text-content-secondary mb-4 max-w-md">{error}</p>
-                 </div>
-            );
+        if (customerSession) {
+            return <CustomerDashboard user={customerSession.user} parcel={customerSession.parcel} onLogout={handleLogout} />;
         }
 
         if (!currentUser) {
-            return <LandingScreen onSelectRole={handleRoleSelect} onCustomerLogin={handleCustomerLogin} />;
+            return <LoginScreen onCustomerLogin={handleCustomerLogin} authError={authError} clearAuthError={() => setAuthError(null)} />;
         }
 
         switch (currentUser.role) {
@@ -127,14 +153,8 @@ const AppContent: React.FC = () => {
             case UserRole.SALES_MANAGER:
             case UserRole.DIRECT_SALES:
                  return <TeamDashboard user={currentUser} onLogout={handleLogout} />;
-            case UserRole.CUSTOMER:
-                if (trackedParcel) {
-                     return <CustomerDashboard user={currentUser} parcel={trackedParcel} onLogout={handleLogout} />;
-                }
-                // Fallback if parcel somehow missing
-                return <LandingScreen onSelectRole={handleRoleSelect} onCustomerLogin={handleCustomerLogin} />;
             default:
-                 return <LandingScreen onSelectRole={handleRoleSelect} onCustomerLogin={handleCustomerLogin} />;
+                 return <LoginScreen onCustomerLogin={handleCustomerLogin} authError="Invalid user role." clearAuthError={() => setAuthError(null)} />;
         }
     };
 

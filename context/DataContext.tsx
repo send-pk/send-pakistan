@@ -71,8 +71,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (salaryError) throw new Error(`Error fetching salary payments:\n${salaryError.message}`);
             
             const convertedParcels = keysToCamel(parcelData || []).map((p: Parcel) => ({ ...p, createdAt: p.createdAt || p.updatedAt }));
+            const convertedUsers = (keysToCamel(userData || []) as any[]).map(user => ({
+                ...user,
+                role: user.role ? (user.role.toUpperCase() as UserRole) : undefined,
+            })).filter(user => user.role); // Filter out users with no role
+
             setParcels(convertedParcels);
-            setUsers(keysToCamel(userData || []));
+            setUsers(convertedUsers);
             setInvoices(keysToCamel(invoiceData || []));
             setSalaryPayments(keysToCamel(salaryData || []));
             

@@ -8,10 +8,12 @@ import { SearchIcon } from './icons/SearchIcon';
 import { UserIcon } from './icons/UserIcon';
 import { supabase } from '../supabase';
 import { AlertTriangleIcon } from './icons/AlertTriangleIcon';
+import { Modal } from './shared/Modal';
 
 interface LoginScreenProps {
-  onLogin: (user: User, parcel: Parcel) => void;
-  onShowRoleSelector: () => void;
+  onCustomerLogin: (user: User, parcel: Parcel) => void;
+  authError: string | null;
+  clearAuthError: () => void;
 }
 
 // Case conversion helpers moved here for direct DB query
@@ -28,18 +30,23 @@ const keysToCamel = (obj: any): any => {
   return obj;
 };
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowRoleSelector }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onCustomerLogin, authError, clearAuthError }) => {
     const [trackingNumber, setTrackingNumber] = useState('');
-    const [error, setError] = useState('');
+    const [trackingError, setTrackingError] = useState('');
     const [isTracking, setIsTracking] = useState(false);
-
+    
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loginError, setLoginError] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     const handleTrack = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!trackingNumber.trim()) return;
 
         setIsTracking(true);
-        setError('');
+        setTrackingError('');
 
         try {
             const { data, error: dbError } = await supabase
@@ -54,13 +61,37 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowRoleSelector }
             
             const foundParcel = keysToCamel(data) as Parcel;
             const customerUser: User = { id: 'customer-temp', name: foundParcel.recipientName, email: 'customer@temp.com', role: UserRole.CUSTOMER, status: 'ACTIVE' };
-            onLogin(customerUser, foundParcel);
+            onCustomerLogin(customerUser, foundParcel);
 
         } catch (err) {
-            setError('Tracking number not found. Please check and try again.');
+            setTrackingError('Tracking number not found. Please check and try again.');
         } finally {
             setIsTracking(false);
         }
+    };
+    
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoggingIn(true);
+        setLoginError('');
+        if (authError) clearAuthError();
+
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+        if (error) {
+            setLoginError(error.message);
+        } else {
+            // Success, onAuthStateChange will handle the rest.
+            setIsModalOpen(false);
+        }
+        setIsLoggingIn(false);
+    };
+
+    const handleOpenModal = () => {
+        setIsModalOpen(true);
+        setEmail('');
+        setPassword('');
+        setLoginError('');
     };
     
     return (
@@ -68,7 +99,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowRoleSelector }
             <header className="py-4 px-4 sm:px-6 md:px-12 flex justify-between items-center border-b border-border shadow-sm sticky top-0 bg-background/80 backdrop-blur-sm z-50">
                 <Logo />
                 <div className="flex items-center gap-4">
-                    <Button onClick={onShowRoleSelector} variant="secondary" className="flex items-center gap-2">
+                    <Button onClick={handleOpenModal} variant="secondary" className="flex items-center gap-2">
                         <UserIcon className="w-5 h-5"/>
                         Login
                     </Button>
@@ -103,7 +134,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowRoleSelector }
                                             id="tracking"
                                             type="text"
                                             value={trackingNumber}
-                                            onChange={e => { setTrackingNumber(e.target.value); setError(''); }}
+                                            onChange={e => { setTrackingNumber(e.target.value); setTrackingError(''); }}
                                             placeholder="Enter tracking number (e.g., SD1001)"
                                             className="flex-grow w-full bg-surface border-2 border-border rounded-lg px-4 py-2.5 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                                         />
@@ -112,9 +143,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowRoleSelector }
                                             {isTracking ? 'Tracking...' : 'Track'}
                                         </Button>
                                     </div>
-                                    {error && <p className="text-red-500 mt-4 text-center text-sm">{error}</p>}
+                                    {trackingError && <p className="text-red-500 mt-4 text-center text-sm">{trackingError}</p>}
                                 </form>
                             </Card>
+                            {authError && (
+                                <div className="p-4 rounded-md bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 flex items-start gap-3">
+                                    <AlertTriangleIcon className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <h3 className="font-semibold">Authentication Error</h3>
+                                        <p className="text-sm">{authError}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </section>
@@ -131,6 +171,26 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowRoleSelector }
                     © 2025 SEND. Powered By stor.
                 </p>
             </footer>
+
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Login">
+                <form onSubmit={handleLogin} className="space-y-4">
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-content-secondary mb-2">Email or Username</label>
+                        <input id="email" type="text" value={email} onChange={e => setEmail(e.target.value)} required autoFocus className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"/>
+                    </div>
+                     <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-content-secondary mb-2">Password</label>
+                        <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"/>
+                    </div>
+                    {loginError && <p className="text-red-500 text-sm text-center">{loginError}</p>}
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={isLoggingIn}>
+                            {isLoggingIn ? 'Logging in...' : 'Login'}
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 };
