@@ -23,6 +23,7 @@ import { ArrowUturnLeftIcon } from '../icons/ArrowUturnLeftIcon';
 import { PhoneIcon } from '../icons/PhoneIcon';
 import { EyeIcon } from '../icons/EyeIcon';
 import { UserIcon } from '../icons/UserIcon';
+import { AlertTriangleIcon } from '../icons/AlertTriangleIcon';
 
 declare var Html5Qrcode: any;
 
@@ -48,7 +49,7 @@ const formatReturnItems = (items?: Item[]): string => {
 
 
 const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
-    const { parcels: allParcels, users, updateParcelStatus, updateDriverLocation } = useData();
+    const { parcels: allParcels, users, updateParcelStatus, updateDriverLocation, loading, error } = useData();
     const [activeFilter, setActiveFilter] = useState<'toPick' | 'pickedUp' | 'outForDelivery' | 'delivered' | 'outForReturn' | 'returned'>('toPick');
     
     const [dateFilter, setDateFilter] = useState('today');
@@ -332,6 +333,26 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
             </Card>
         );
     };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col justify-center items-center h-screen">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+                <p className="mt-4 text-lg text-content-secondary">Loading Driver App...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col justify-center items-center h-screen text-center p-4">
+                <AlertTriangleIcon className="w-12 h-12 text-red-500 mb-4" />
+                <h2 className="text-xl font-bold text-content-primary mb-2">Error Loading Data</h2>
+                <p className="text-content-secondary mb-4 max-w-md">{error}</p>
+                <Button onClick={() => window.location.reload()}>Try Again</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-md mx-auto h-screen flex flex-col bg-background">
