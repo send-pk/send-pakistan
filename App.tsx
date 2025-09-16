@@ -75,7 +75,7 @@ const AppContent: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeParcel, setActiveParcel] = useState<Parcel | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(true);
-  const { loading: isDataLoading, fetchData, clearData } = useData();
+  const { fetchData, clearData } = useData();
 
   const fetchUserProfile = useCallback(async (userId: string): Promise<User | null> => {
       const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
@@ -120,10 +120,9 @@ const AppContent: React.FC = () => {
   // Effect to fetch application data once a user is authenticated and set
   useEffect(() => {
     if (currentUser) {
-        fetchData().catch(error => {
-            console.error("A critical error occurred while fetching application data. Signing out to prevent a broken state.", error);
-            supabase.auth.signOut();
-        });
+        // Data fetching errors are now handled within the DataContext itself,
+        // preventing the app from signing out the user on a data failure.
+        fetchData();
     }
   }, [currentUser, fetchData]);
 
@@ -143,8 +142,9 @@ const AppContent: React.FC = () => {
   };
 
   const renderContent = () => {
-    // Show loader while checking initial auth status OR while fetching data for a logged-in user.
-    if (checkingStatus || (currentUser && isDataLoading)) {
+    // Show a loader only while checking the initial authentication status.
+    // The dashboard component itself will handle the data loading state.
+    if (checkingStatus) {
         return (
             <div className="flex justify-center items-center h-screen">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>

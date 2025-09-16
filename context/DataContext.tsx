@@ -44,9 +44,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -74,11 +76,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setInvoices(keysToCamel(invoiceData || []));
             setSalaryPayments(keysToCamel(salaryData || []));
             
-        } catch (error) {
+        } catch (error: any) {
             console.error("Data fetching error:", error);
-            // Re-throw the error so the calling function (e.g., in App.tsx) can handle it.
-            // This prevents the app from entering a broken state with a logged-in user but no data.
-            throw error;
+            setError(`Failed to load application data: ${error.message || 'An unknown error occurred.'}`);
         } finally {
             setLoading(false);
         }
@@ -200,7 +200,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [parcels, users, fetchData]);
     
     const value: DataContextType = useMemo(() => ({
-        parcels, users, invoices, salaryPayments, loading,
+        parcels, users, invoices, salaryPayments, loading, error,
         fetchData,
         clearData,
         updateParcelStatus,
@@ -474,7 +474,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const { error } = await supabase.from('salary_payments').insert(keysToSnake({ ...paymentData, status: 'PAID', paidAt: new Date().toISOString() }));
             if (error) console.error("Error marking salary as paid:", error); else await fetchData();
         }
-    }), [parcels, users, invoices, salaryPayments, loading, fetchData, clearData, updateParcelStatus]);
+    }), [parcels, users, invoices, salaryPayments, loading, error, fetchData, clearData, updateParcelStatus]);
 
     return (
         <DataContext.Provider value={value}>

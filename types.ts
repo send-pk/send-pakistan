@@ -176,6 +176,7 @@ export interface DataContextType {
   invoices: Invoice[];
   salaryPayments: SalaryPayment[];
   loading: boolean;
+  error: string | null;
   fetchData: () => Promise<void>;
   clearData: () => void;
   updateParcelStatus: (parcelId: string, status: ParcelStatus, currentUser?: User, details?: { reason?: string; proof?: string; deliveryZone?: string; driverId?: string; weight?: number; }) => Promise<void>;

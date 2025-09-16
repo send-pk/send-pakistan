@@ -18,6 +18,7 @@ import { SalesTab } from './tabs/SalesTab';
 import { LogoutIcon } from '../icons/LogoutIcon';
 import { PENDING_PARCEL_STATUSES } from '../../constants';
 import { UsersIcon } from '../icons/UsersIcon';
+import { AlertTriangleIcon } from '../icons/AlertTriangleIcon';
 
 // Helper to format date to YYYY-MM-DD for input fields
 const toInputDate = (date: Date) => {
@@ -33,7 +34,7 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
-    const { parcels: allParcels, users, invoices } = useData();
+    const { parcels: allParcels, users, invoices, loading, error } = useData();
     const [activeTab, setActiveTab] = useState<'dashboard' | 'warehouse' | 'finance' | 'brands' | 'drivers' | 'sales'>(
         user.role === UserRole.WAREHOUSE_MANAGER ? 'warehouse' : 'dashboard'
     );
@@ -101,6 +102,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         {children}
       </button>
     );
+    
+    if (loading) {
+        return (
+            <div className="flex flex-col justify-center items-center h-screen">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+                <p className="mt-4 text-lg text-content-secondary">Loading Dashboard...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col justify-center items-center h-screen text-center p-4">
+                <AlertTriangleIcon className="w-12 h-12 text-red-500 mb-4" />
+                <h2 className="text-xl font-bold text-content-primary mb-2">Error Loading Data</h2>
+                <p className="text-content-secondary mb-4 max-w-md">{error}</p>
+                <Button onClick={() => window.location.reload()}>Try Again</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-screen bg-background">
