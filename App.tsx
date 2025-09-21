@@ -1,14 +1,13 @@
+
 import React, { useState, createContext, useContext, useEffect, useMemo, useCallback } from 'react';
-import { User, UserRole, Parcel } from './types';
+import { User, UserRole } from './types';
 import { DataProvider, useData } from './context/DataContext';
 import AdminDashboard from './components/admin/AdminDashboard';
 import BrandDashboard from './components/client/ClientDashboard';
 import DriverApp from './components/driver/DriverApp';
 import TeamDashboard from './components/team/TeamDashboard';
 import LoginScreen from './components/LoginScreen';
-import CustomerDashboard from './components/customer/CustomerDashboard';
 import { supabase } from './supabase';
-import { AlertTriangleIcon } from './components/icons/AlertTriangleIcon';
 
 // Case conversion helpers to map between JS camelCase and Postgres snake_case
 const toCamel = (s: string): string => s.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
@@ -78,7 +77,6 @@ const AppContent: React.FC = () => {
     const [checkingStatus, setCheckingStatus] = useState(true);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
-    const [customerSession, setCustomerSession] = useState<{ user: User; parcel: Parcel } | null>(null);
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -98,9 +96,16 @@ const AppContent: React.FC = () => {
                     setCurrentUser(null);
                 } else {
                     const userProfile = keysToCamel(profile) as User;
-                    // Ensure role is always uppercase for consistent checks
-                    userProfile.role = userProfile.role ? (userProfile.role.toUpperCase() as UserRole) : UserRole.CUSTOMER;
-                    setCurrentUser(userProfile);
+                    if (userProfile.role) {
+                        // Ensure role is always uppercase for consistent checks
+                        userProfile.role = userProfile.role.toUpperCase() as UserRole;
+                        setCurrentUser(userProfile);
+                    } else {
+                        console.error("User profile has no role:", profile.id);
+                        setAuthError("Your account does not have a valid role assigned. Please contact support.");
+                        await supabase.auth.signOut();
+                        setCurrentUser(null);
+                    }
                 }
             } else {
                 setCurrentUser(null);
@@ -112,15 +117,10 @@ const AppContent: React.FC = () => {
         return () => subscription.unsubscribe();
     }, [fetchData, clearData]);
 
-    const handleCustomerLogin = (user: User, parcel: Parcel) => {
-        setCustomerSession({ user, parcel });
-    };
-
     const handleLogout = async () => {
         const { error } = await supabase.auth.signOut();
         if (error) console.error('Error logging out:', error);
         setCurrentUser(null);
-        setCustomerSession(null);
         clearData();
     };
     
@@ -134,12 +134,8 @@ const AppContent: React.FC = () => {
             );
         }
 
-        if (customerSession) {
-            return <CustomerDashboard user={customerSession.user} parcel={customerSession.parcel} onLogout={handleLogout} />;
-        }
-
         if (!currentUser) {
-            return <LoginScreen onCustomerLogin={handleCustomerLogin} authError={authError} clearAuthError={() => setAuthError(null)} />;
+            return <LoginScreen authError={authError} clearAuthError={() => setAuthError(null)} />;
         }
 
         switch (currentUser.role) {
@@ -154,7 +150,7 @@ const AppContent: React.FC = () => {
             case UserRole.DIRECT_SALES:
                  return <TeamDashboard user={currentUser} onLogout={handleLogout} />;
             default:
-                 return <LoginScreen onCustomerLogin={handleCustomerLogin} authError="Invalid user role." clearAuthError={() => setAuthError(null)} />;
+                 return <LoginScreen authError="Invalid user role." clearAuthError={() => setAuthError(null)} />;
         }
     };
 

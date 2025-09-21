@@ -7,7 +7,7 @@ import { DollarSignIcon } from '../icons/DollarSignIcon';
 import { useData } from '../../context/DataContext';
 import { TruckIcon } from '../icons/TruckIcon';
 import { MapPinIcon } from '../icons/MapPinIcon';
-import { LahoreMap } from '../customer/LahoreMap';
+// Fix: Removed unused LahoreMap import, as it's not exported from its module.
 import { AlertTriangleIcon } from '../icons/AlertTriangleIcon';
 import { Button } from './Button';
 import { ArrowPathIcon } from '../icons/ArrowPathIcon';
