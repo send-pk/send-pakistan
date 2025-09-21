@@ -19,6 +19,8 @@ import { LogoutIcon } from '../icons/LogoutIcon';
 import { PENDING_PARCEL_STATUSES } from '../../constants';
 import { UsersIcon } from '../icons/UsersIcon';
 import { AlertTriangleIcon } from '../icons/AlertTriangleIcon';
+import { SparklesIcon } from '../icons/SparklesIcon'; // Import new icon
+import { SmartInquiryModal } from './shared/SmartInquiryModal'; // Import new modal
 
 // Helper to format date to YYYY-MM-DD for input fields
 const toInputDate = (date: Date) => {
@@ -47,6 +49,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     const [trackingInput, setTrackingInput] = useState('');
     const [foundParcel, setFoundParcel] = useState<Parcel | null>(null);
     const [trackingError, setTrackingError] = useState('');
+    const [isSmartInquiryOpen, setIsSmartInquiryOpen] = useState(false); // State for new modal
 
     const parcels = useMemo(() => {
         if (dateFilter === 'all') {
@@ -134,6 +137,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     </span>
                 </div>
                 <div className="flex items-center flex-wrap justify-center md:justify-end gap-2">
+                    {user.role === UserRole.ADMIN && (
+                        <Button variant="secondary" onClick={() => setIsSmartInquiryOpen(true)} className="flex items-center gap-2" aria-label="Smart Inquiry">
+                            <SparklesIcon className="w-4 h-4 text-purple-500"/>
+                            <span className="hidden sm:inline">Smart Inquiry</span>
+                        </Button>
+                    )}
                     <Button variant="secondary" onClick={() => setIsTrackingModalOpen(true)} className="flex items-center gap-2" aria-label="Track Parcel">
                          <SearchIcon className="w-4 h-4"/>
                          <span className="hidden sm:inline">Track</span>
@@ -192,6 +201,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 {trackingError && <p className="text-red-500 mt-4">{trackingError}</p>}
                 {foundParcel && (<div className="mt-6"><ParcelDetailsModal isOpen={true} onClose={() => setFoundParcel(null)} parcel={foundParcel} user={user} /></div>)}
             </Modal>
+            
+            {user.role === UserRole.ADMIN && (
+                <SmartInquiryModal 
+                    isOpen={isSmartInquiryOpen} 
+                    onClose={() => setIsSmartInquiryOpen(false)}
+                    parcels={allParcels}
+                    users={users}
+                />
+            )}
         </div>
     );
 };
