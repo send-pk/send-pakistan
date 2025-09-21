@@ -54,8 +54,15 @@ export const SmartInquiryModal: React.FC<SmartInquiryModalProps> = ({ isOpen, on
         setError(null);
 
         try {
+            // Safeguard against missing API key which causes a crash in browser environments.
+            if (typeof process === 'undefined' || !process.env.API_KEY) {
+                setError("The Smart Inquiry feature is not configured. Please contact an administrator to set up the API key.");
+                setIsLoading(false);
+                return;
+            }
+            
             const { GoogleGenAI } = await import('@google/genai');
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             
             // Prepare a summarized version of the data for the prompt
             const summarizedParcels = parcels.map(p => ({
@@ -110,11 +117,7 @@ export const SmartInquiryModal: React.FC<SmartInquiryModalProps> = ({ isOpen, on
 
         } catch (err: any) {
             console.error("Gemini API error:", err);
-            if (err instanceof ReferenceError && err.message.includes('process is not defined')) {
-                 setError("Could not connect to the AI service. The API key is not configured correctly in this environment.");
-            } else {
-                 setError("Sorry, I encountered an error while processing your request. Please try again.");
-            }
+            setError("Sorry, I encountered an error while processing your request. Please check the console for details and try again.");
         } finally {
             setIsLoading(false);
         }
