@@ -55,19 +55,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             const { data: parcelData, error: parcelError } = await supabase
                 .from('parcels')
-                .select('*')
+                .select('id, order_id, tracking_number, brand_id, brand_name, recipient_name, recipient_address, recipient_phone, status, pickup_driver_id, pickup_address, delivery_driver_id, cod_amount, weight, delivery_charge, tax, created_at, updated_at, delivery_zone, item_details, return_item_details, delivery_instructions, shipper_advice, brand_remark, is_cod_reconciled, invoice_id, failed_attempt_reason, proof_of_attempt, is_exchange, linked_parcel_id, is_open_parcel, history')
                 .or(`status.in.(${PENDING_PARCEL_STATUSES.map(s => `'${s}'`).join(',')}),updated_at.gte.${thirtyDaysAgo.toISOString()}`);
             if (parcelError) throw new Error(`Error fetching parcels:\n${parcelError.message}`);
 
-            const { data: userData, error: userError } = await supabase.from('users').select('*');
+            const { data: userData, error: userError } = await supabase.from('users').select('id, name, username, email, role, status, delivery_zones, phone, company_phone, correspondent_name, correspondent_phone, current_location, office_address, pickup_locations, bank_name, account_title, account_number, weight_charges, fuel_surcharge, photo_url, whatsapp_number, current_address, permanent_address, guardian_contact, id_card_number, on_duty, duty_log, base_salary, commission_rate, per_pickup_commission, per_delivery_commission, brand_commissions');
             if (userError) throw new Error(`Error fetching users:\n${userError.message}`);
 
             const ninetyDaysAgo = new Date();
             ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-            const { data: invoiceData, error: invoiceError } = await supabase.from('invoices').select('*').gte('created_at', ninetyDaysAgo.toISOString());
+            const { data: invoiceData, error: invoiceError } = await supabase.from('invoices').select('id, brand_id, brand_name, created_at, parcel_ids, total_cod, total_charges, total_tax, net_payout, status, transaction_id, paid_at').gte('created_at', ninetyDaysAgo.toISOString());
             if (invoiceError) throw new Error(`Error fetching invoices:\n${invoiceError.message}`);
             
-            const { data: salaryData, error: salaryError } = await supabase.from('salary_payments').select('*');
+            const { data: salaryData, error: salaryError } = await supabase.from('salary_payments').select('id, user_id, period_start_date, period_end_date, base_salary, total_commission, total_salary, status, paid_at, transaction_id, breakdown');
             if (salaryError) throw new Error(`Error fetching salary payments:\n${salaryError.message}`);
             
             const convertedParcels = keysToCamel(parcelData || []).map((p: Parcel) => ({ ...p, createdAt: p.createdAt || p.updatedAt }));

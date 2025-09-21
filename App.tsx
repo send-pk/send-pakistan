@@ -1,4 +1,5 @@
 
+
 import React, { useState, createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { User, UserRole } from './types';
 import { DataProvider, useData } from './context/DataContext';
@@ -85,7 +86,7 @@ const AppContent: React.FC = () => {
                 await fetchData();
                 const { data: profile, error } = await supabase
                     .from('users')
-                    .select('*')
+                    .select('id, name, username, email, role, status, delivery_zones, phone, company_phone, correspondent_name, correspondent_phone, current_location, office_address, pickup_locations, bank_name, account_title, account_number, weight_charges, fuel_surcharge, photo_url, whatsapp_number, current_address, permanent_address, guardian_contact, id_card_number, on_duty, duty_log, base_salary, commission_rate, per_pickup_commission, per_delivery_commission, brand_commissions')
                     .eq('id', session.user.id)
                     .single();
                 
