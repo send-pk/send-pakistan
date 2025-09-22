@@ -85,10 +85,13 @@ const AppContent: React.FC = () => {
         // The onAuthStateChange listener will handle the state update.
     };
     
-    const handleSession = useCallback(async (session: Session | null) => {
+    const updateUserSession = useCallback(async () => {
         setCheckingStatus(true);
         setAuthError(null);
         try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError) throw sessionError;
+
             if (session?.user) {
                 const { data: profile, error: profileError } = await supabase
                     .from('users')
@@ -112,9 +115,6 @@ const AppContent: React.FC = () => {
         } catch (error: any) {
             console.error("Auth session error:", error);
             setAuthError(error.message);
-            // Do not sign out here. If the profile fetch fails, the user is still
-            // authenticated. We should show them an error on the login screen
-            // instead of causing a redirect loop.
             setCurrentUser(null);
             clearData();
         } finally {
@@ -123,20 +123,17 @@ const AppContent: React.FC = () => {
     }, [fetchData, clearData]);
 
     useEffect(() => {
-        // Handle initial page load
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            handleSession(session);
-        });
+        updateUserSession(); // Initial check on component mount.
         
         // Listen for auth state changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            handleSession(session);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+            updateUserSession();
         });
 
         return () => {
             subscription?.unsubscribe();
         };
-    }, [handleSession]);
+    }, [updateUserSession]);
     
     const renderContent = () => {
         if (checkingStatus) {
