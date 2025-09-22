@@ -142,7 +142,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ parcels, allParcels,
                     )}
                 </div>
                 <div className="flex flex-col sm:flex-row items-center gap-2 mb-3">
-                    <div className="relative flex-grow w-full"><SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-content-muted" /><input placeholder="Search within filtered results..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors" /></div>
+                    <div className="relative flex-grow w-full"><SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-content-muted" /><input placeholder="Search Tracking #, Order ID, Recipient, Brand..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors" /></div>
                     {selectedParcels.size > 0 && <div className="flex items-center gap-2 flex-shrink-0 bg-primary/10 p-2 rounded-lg"><span className="text-sm font-semibold text-primary">{selectedParcels.size} selected</span><Button size="sm" onClick={() => setIsBulkEditModalOpen(true)} className="flex items-center gap-1.5"><EditIcon className="w-4 h-4" /> Edit</Button><Button size="sm" variant="secondary" onClick={() => setSelectedParcels(new Set())}>Clear</Button></div>}
                 </div>
                 <div className="overflow-x-auto"><table className="w-full text-left text-sm">
