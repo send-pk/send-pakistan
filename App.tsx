@@ -79,51 +79,60 @@ const AppContent: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            setAuthError(null);
+    const handleLogout = () => {
+        supabase.auth.signOut().catch(error => console.error('Error logging out:', error));
+        // The onAuthStateChange listener will handle the state update.
+    };
+    
+    const updateUserSession = useCallback(async () => {
+        setCheckingStatus(true);
+        setAuthError(null);
+        try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError) throw sessionError;
+
             if (session?.user) {
-                await fetchData();
-                const { data: profile, error } = await supabase
+                const { data: profile, error: profileError } = await supabase
                     .from('users')
                     .select('id, name, username, email, role, status, delivery_zones, phone, company_phone, correspondent_name, correspondent_phone, current_location, office_address, pickup_locations, bank_name, account_title, account_number, weight_charges, fuel_surcharge, photo_url, whatsapp_number, current_address, permanent_address, guardian_contact, id_card_number, on_duty, duty_log, base_salary, commission_rate, per_pickup_commission, per_delivery_commission, brand_commissions')
                     .eq('id', session.user.id)
                     .single();
                 
-                if (error || !profile) {
-                    console.error("Profile fetch error:", error);
-                    setAuthError("Your account is valid, but we couldn't load your user profile. Please contact support.");
-                    await supabase.auth.signOut();
-                    setCurrentUser(null);
-                } else {
-                    const userProfile = keysToCamel(profile) as User;
-                    if (userProfile.role) {
-                        // Ensure role is always uppercase for consistent checks
-                        userProfile.role = userProfile.role.toUpperCase() as UserRole;
-                        setCurrentUser(userProfile);
-                    } else {
-                        console.error("User profile has no role:", profile.id);
-                        setAuthError("Your account does not have a valid role assigned. Please contact support.");
-                        await supabase.auth.signOut();
-                        setCurrentUser(null);
-                    }
-                }
+                if (profileError) throw profileError;
+                if (!profile) throw new Error("Your account is valid, but we couldn't load your user profile. Please contact support.");
+
+                const userProfile = keysToCamel(profile) as User;
+                if (!userProfile.role) throw new Error("Your account does not have a valid role assigned. Please contact support.");
+                
+                userProfile.role = userProfile.role.toUpperCase() as UserRole;
+                await fetchData();
+                setCurrentUser(userProfile);
             } else {
                 setCurrentUser(null);
                 clearData();
             }
+        } catch (error: any) {
+            console.error("Auth session error:", error);
+            setAuthError(error.message);
+            // Sign out to ensure a clean state, which will trigger the listener to clear user data.
+            await supabase.auth.signOut();
+        } finally {
             setCheckingStatus(false);
+        }
+    }, [fetchData, clearData]);
+
+    useEffect(() => {
+        updateUserSession(); // Check session on initial load
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            // Re-check the user session on sign-in or sign-out events.
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                 updateUserSession();
+            }
         });
 
         return () => subscription.unsubscribe();
-    }, [fetchData, clearData]);
-
-    const handleLogout = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) console.error('Error logging out:', error);
-        setCurrentUser(null);
-        clearData();
-    };
+    }, [updateUserSession]);
     
     const renderContent = () => {
         if (checkingStatus) {
