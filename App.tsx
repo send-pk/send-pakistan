@@ -1,6 +1,6 @@
 
-
 import React, { useState, createContext, useContext, useEffect, useMemo, useCallback } from 'react';
+import { Session } from '@supabase/supabase-js';
 import { User, UserRole } from './types';
 import { DataProvider, useData } from './context/DataContext';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -84,13 +84,10 @@ const AppContent: React.FC = () => {
         // The onAuthStateChange listener will handle the state update.
     };
     
-    const updateUserSession = useCallback(async () => {
+    const handleSession = useCallback(async (session: Session | null) => {
         setCheckingStatus(true);
         setAuthError(null);
         try {
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError) throw sessionError;
-
             if (session?.user) {
                 const { data: profile, error: profileError } = await supabase
                     .from('users')
@@ -114,24 +111,30 @@ const AppContent: React.FC = () => {
         } catch (error: any) {
             console.error("Auth session error:", error);
             setAuthError(error.message);
-            // Sign out to ensure a clean state, which will trigger the listener to clear user data.
+            // Sign out to ensure a clean state if something goes wrong during profile fetch
             await supabase.auth.signOut();
+            setCurrentUser(null);
+            clearData();
         } finally {
             setCheckingStatus(false);
         }
     }, [fetchData, clearData]);
 
     useEffect(() => {
-        updateUserSession(); // Check session on initial load
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, _session) => {
-            // Re-check the user session on any auth event for robustness.
-            // The updateUserSession function handles both logged-in and logged-out states.
-            updateUserSession();
+        // Handle initial page load
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            handleSession(session);
+        });
+        
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            handleSession(session);
         });
 
-        return () => subscription.unsubscribe();
-    }, [updateUserSession]);
+        return () => {
+            subscription?.unsubscribe();
+        };
+    }, [handleSession]);
     
     const renderContent = () => {
         if (checkingStatus) {
