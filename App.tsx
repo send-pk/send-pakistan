@@ -1,4 +1,5 @@
 
+
 import React, { useState, createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { User, UserRole } from './types';
@@ -111,8 +112,9 @@ const AppContent: React.FC = () => {
         } catch (error: any) {
             console.error("Auth session error:", error);
             setAuthError(error.message);
-            // Sign out to ensure a clean state if something goes wrong during profile fetch
-            await supabase.auth.signOut();
+            // Do not sign out here. If the profile fetch fails, the user is still
+            // authenticated. We should show them an error on the login screen
+            // instead of causing a redirect loop.
             setCurrentUser(null);
             clearData();
         } finally {
