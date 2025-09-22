@@ -17,6 +17,8 @@ import { DriversTab } from './tabs/DriversTab';
 import { SalesTab } from './tabs/SalesTab';
 import { LogoutIcon } from '../icons/LogoutIcon';
 import { PENDING_PARCEL_STATUSES } from '../../constants';
+import { SparklesIcon } from '../icons/SparklesIcon';
+import { SmartInquiryModal } from './shared/SmartInquiryModal';
 import { UsersIcon } from '../icons/UsersIcon';
 import { AlertTriangleIcon } from '../icons/AlertTriangleIcon';
 
@@ -47,6 +49,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     const [trackingInput, setTrackingInput] = useState('');
     const [foundParcel, setFoundParcel] = useState<Parcel | null>(null);
     const [trackingError, setTrackingError] = useState('');
+    const [isSmartInquiryModalOpen, setIsSmartInquiryModalOpen] = useState(false);
 
     const parcels = useMemo(() => {
         if (dateFilter === 'all') {
@@ -134,6 +137,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     </span>
                 </div>
                 <div className="flex items-center flex-wrap justify-center md:justify-end gap-2">
+                    {user.role === UserRole.ADMIN && (
+                        <Button
+                            variant="inverted"
+                            onClick={() => setIsSmartInquiryModalOpen(true)}
+                            className="flex items-center gap-2"
+                            aria-label="Smart Inquiry"
+                        >
+                            <SparklesIcon className="w-4 h-4" />
+                            <span className="hidden sm:inline">Smart Inquiry</span>
+                        </Button>
+                    )}
                     <Button variant="secondary" onClick={() => setIsTrackingModalOpen(true)} className="flex items-center gap-2" aria-label="Track Parcel">
                          <SearchIcon className="w-4 h-4"/>
                          <span className="hidden sm:inline">Track</span>
@@ -192,6 +206,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 {trackingError && <p className="text-red-500 mt-4">{trackingError}</p>}
                 {foundParcel && (<div className="mt-6"><ParcelDetailsModal isOpen={true} onClose={() => setFoundParcel(null)} parcel={foundParcel} user={user} /></div>)}
             </Modal>
+            
+            <SmartInquiryModal
+                isOpen={isSmartInquiryModalOpen}
+                onClose={() => setIsSmartInquiryModalOpen(false)}
+                parcels={allParcels}
+                users={users}
+            />
         </div>
     );
 };
