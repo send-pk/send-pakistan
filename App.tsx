@@ -124,11 +124,10 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         updateUserSession(); // Check session on initial load
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            // Re-check the user session on sign-in or sign-out events.
-            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-                 updateUserSession();
-            }
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, _session) => {
+            // Re-check the user session on any auth event for robustness.
+            // The updateUserSession function handles both logged-in and logged-out states.
+            updateUserSession();
         });
 
         return () => subscription.unsubscribe();
