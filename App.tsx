@@ -85,13 +85,10 @@ const AppContent: React.FC = () => {
         // The onAuthStateChange listener will handle the state update.
     };
     
-    const updateUserSession = useCallback(async () => {
+    const handleSession = useCallback(async (session: Session | null) => {
         setCheckingStatus(true);
         setAuthError(null);
         try {
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError) throw sessionError;
-
             if (session?.user) {
                 const { data: profile, error: profileError } = await supabase
                     .from('users')
@@ -123,17 +120,20 @@ const AppContent: React.FC = () => {
     }, [fetchData, clearData]);
 
     useEffect(() => {
-        updateUserSession(); // Initial check on component mount.
+        // Initial check on component mount.
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            handleSession(session);
+        });
         
         // Listen for auth state changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-            updateUserSession();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            handleSession(session);
         });
 
         return () => {
             subscription?.unsubscribe();
         };
-    }, [updateUserSession]);
+    }, [handleSession]);
     
     const renderContent = () => {
         if (checkingStatus) {
