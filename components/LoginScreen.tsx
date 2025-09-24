@@ -12,10 +12,21 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ authError, clearAuthError }) => {
+    const [isLoginView, setIsLoginView] = useState(true);
+
+    // Login states
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loginError, setLoginError] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+    // Signup states
+    const [name, setName] = useState('');
+    const [signupEmail, setSignupEmail] = useState('');
+    const [signupPassword, setSignupPassword] = useState('');
+    const [signupError, setSignupError] = useState('');
+    const [isSigningUp, setIsSigningUp] = useState(false);
+    const [signupSuccess, setSignupSuccess] = useState(false);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,6 +44,138 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ authError, clearAuthError }) 
 
         // On successful login, the onAuthStateChange listener in App.tsx will handle
         // fetching user data and navigating to the correct dashboard.
+    };
+
+    const handleSignUp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSigningUp(true);
+        setSignupError('');
+        setSignupSuccess(false);
+
+        const { data, error } = await supabase.auth.signUp({
+            email: signupEmail,
+            password: signupPassword,
+            options: {
+                data: {
+                    full_name: name,
+                }
+            }
+        });
+
+        if (error) {
+            setSignupError(error.message);
+            setIsSigningUp(false);
+            return;
+        }
+        
+        if (data.user) {
+            setSignupSuccess(true);
+        }
+        
+        setIsSigningUp(false);
+    };
+
+    const renderLoginForm = () => (
+        <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+                <label htmlFor="email" className="block text-sm font-medium text-content-secondary mb-2">Email</label>
+                <input 
+                    id="email" 
+                    type="email" 
+                    autoComplete="email"
+                    value={email} 
+                    onChange={e => { setEmail(e.target.value); setLoginError(''); }} 
+                    required 
+                    autoFocus 
+                    className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+            </div>
+             <div>
+                <label htmlFor="password" className="block text-sm font-medium text-content-secondary mb-2">Password</label>
+                <input 
+                    id="password" 
+                    type="password" 
+                    autoComplete="current-password"
+                    value={password} 
+                    onChange={e => { setPassword(e.target.value); setLoginError(''); }} 
+                    required 
+                    className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+            </div>
+            {loginError && <p className="text-red-500 text-sm text-center">{loginError}</p>}
+            <div className="pt-2">
+                <Button type="submit" size="lg" className="w-full" disabled={isLoggingIn}>
+                    {isLoggingIn ? 'Logging in...' : 'Login'}
+                </Button>
+            </div>
+        </form>
+    );
+
+    const renderSignupForm = () => {
+        if (signupSuccess) {
+            return (
+                <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <h3 className="text-lg font-semibold text-green-800 dark:text-green-200">Account Created!</h3>
+                    <p className="mt-2 text-sm text-green-700 dark:text-green-300">
+                        Please check your email at <strong>{signupEmail}</strong> to verify your account.
+                    </p>
+                    <p className="mt-2 text-sm text-green-700 dark:text-green-300">
+                       Once verified, please contact an administrator to complete your profile setup.
+                    </p>
+                     <Button onClick={() => { setIsLoginView(true); setSignupSuccess(false); }} className="mt-4">
+                        Back to Login
+                    </Button>
+                </div>
+            )
+        }
+        
+        return (
+             <form onSubmit={handleSignUp} className="space-y-4">
+                <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-content-secondary mb-2">Full Name</label>
+                    <input 
+                        id="name" 
+                        type="text" 
+                        autoComplete="name"
+                        value={name} 
+                        onChange={e => setName(e.target.value)} 
+                        required 
+                        autoFocus
+                        className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="signup-email" className="block text-sm font-medium text-content-secondary mb-2">Email</label>
+                    <input 
+                        id="signup-email" 
+                        type="email" 
+                        autoComplete="email"
+                        value={signupEmail} 
+                        onChange={e => { setSignupEmail(e.target.value); setSignupError(''); }} 
+                        required 
+                        className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                </div>
+                 <div>
+                    <label htmlFor="signup-password" className="block text-sm font-medium text-content-secondary mb-2">Password</label>
+                    <input 
+                        id="signup-password" 
+                        type="password" 
+                        autoComplete="new-password"
+                        value={signupPassword} 
+                        onChange={e => { setSignupPassword(e.target.value); setSignupError(''); }} 
+                        required 
+                        className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                </div>
+                {signupError && <p className="text-red-500 text-sm text-center">{signupError}</p>}
+                <div className="pt-2">
+                    <Button type="submit" size="lg" className="w-full" disabled={isSigningUp}>
+                        {isSigningUp ? 'Creating Account...' : 'Create Account'}
+                    </Button>
+                </div>
+            </form>
+        );
     };
     
     return (
@@ -61,44 +204,35 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ authError, clearAuthError }) 
                         <div className="flex flex-col gap-4">
                             <Card className="p-4 sm:p-6 text-left shadow-2xl border-border/50">
                                 <div className="text-center mb-6">
-                                    <h2 className="text-2xl font-bold text-content-primary">Sign in to your account</h2>
-                                    <p className="text-sm text-content-secondary mt-1">Enter your credentials to access your dashboard.</p>
+                                    <h2 className="text-2xl font-bold text-content-primary">
+                                        {isLoginView ? 'Sign in to your account' : 'Create a new account'}
+                                    </h2>
+                                    <p className="text-sm text-content-secondary mt-1">
+                                        {isLoginView ? 'Enter your credentials to access your dashboard.' : 'Get started by creating your account.'}
+                                    </p>
                                 </div>
-                                <form onSubmit={handleLogin} className="space-y-4">
-                                    <div>
-                                        <label htmlFor="email" className="block text-sm font-medium text-content-secondary mb-2">Email</label>
-                                        <input 
-                                            id="email" 
-                                            type="email" 
-                                            autoComplete="email"
-                                            value={email} 
-                                            onChange={e => { setEmail(e.target.value); setLoginError(''); }} 
-                                            required 
-                                            autoFocus 
-                                            className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
-                                        />
+                                
+                                {isLoginView ? renderLoginForm() : renderSignupForm()}
+                                
+                                {!signupSuccess && (
+                                    <div className="text-center mt-4 text-sm">
+                                        <span className="text-content-secondary">
+                                            {isLoginView ? "Don't have an account?" : "Already have an account?"}
+                                        </span>
+                                        <button 
+                                            onClick={() => {
+                                                setIsLoginView(!isLoginView);
+                                                setLoginError('');
+                                                setSignupError('');
+                                            }}
+                                            className="font-semibold text-primary hover:underline ml-1 focus:outline-none"
+                                        >
+                                            {isLoginView ? "Sign up" : "Login"}
+                                        </button>
                                     </div>
-                                     <div>
-                                        <label htmlFor="password" className="block text-sm font-medium text-content-secondary mb-2">Password</label>
-                                        <input 
-                                            id="password" 
-                                            type="password" 
-                                            autoComplete="current-password"
-                                            value={password} 
-                                            onChange={e => { setPassword(e.target.value); setLoginError(''); }} 
-                                            required 
-                                            className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary"
-                                        />
-                                    </div>
-                                    {loginError && <p className="text-red-500 text-sm text-center">{loginError}</p>}
-                                    <div className="pt-2">
-                                        <Button type="submit" size="lg" className="w-full" disabled={isLoggingIn}>
-                                            {isLoggingIn ? 'Logging in...' : 'Login'}
-                                        </Button>
-                                    </div>
-                                </form>
+                                )}
                             </Card>
-                            {authError && (
+                            {authError && isLoginView && (
                                 <div className="p-4 rounded-md bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 flex items-start gap-3">
                                     <AlertTriangleIcon className="w-5 h-5 mt-0.5 flex-shrink-0" />
                                     <div>
