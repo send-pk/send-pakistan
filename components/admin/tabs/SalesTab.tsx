@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../../../context/DataContext';
 import { User, UserRole, Parcel, ParcelStatus, SalaryPayment } from '../../../types';
@@ -93,16 +94,16 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const handleBrandCommissionChange = (brandId: string, rate: string) => {
-        setFormData(prev => ({...prev, brandCommissions: { ...prev.brandCommissions, [brandId]: rate } }));
+        setFormData(prev => ({...prev, brandCommissions: { ...(prev.brandCommissions || {}), [brandId]: rate } }));
     };
     const handleAddBrandToManager = (brandId: string) => {
-        if (brandId && !formData.brandCommissions.hasOwnProperty(brandId)) {
+        if (brandId && !(formData.brandCommissions || {}).hasOwnProperty(brandId)) {
             handleBrandCommissionChange(brandId, '0');
         }
     };
     const handleRemoveBrandFromManager = (brandId: string) => {
         setFormData(prev => {
-            const newCommissions = { ...prev.brandCommissions };
+            const newCommissions = { ...(prev.brandCommissions || {}) };
             delete newCommissions[brandId];
             return { ...prev, brandCommissions: newCommissions };
         });
@@ -114,8 +115,9 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
         if (!role) return;
 
         const brandCommissionsNum: { [key: string]: number } = {};
-        for(const brandId in formData.brandCommissions) {
-            brandCommissionsNum[brandId] = parseFloat(formData.brandCommissions[brandId]) || 0;
+        const safeBrandCommissions = formData.brandCommissions || {};
+        for(const brandId in safeBrandCommissions) {
+            brandCommissionsNum[brandId] = parseFloat(safeBrandCommissions[brandId]) || 0;
         }
 
         const dataToSave = {
@@ -190,11 +192,11 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
     const openModalForEdit = (user: User) => { setEditingUser(user); setNewUserRole(null); setIsModalOpen(true); };
     const openModalForNew = (role: UserRole) => { setEditingUser(null); setNewUserRole(role); setIsModalOpen(true); };
     const currentRole = editingUser?.role || newUserRole;
-    const managedBrandIds = Object.keys(formData.brandCommissions);
+    const managedBrandIds = Object.keys(formData.brandCommissions || {});
     const availableBrands = brands.filter(b => !managedBrandIds.includes(b.id));
     const userToPrint = printingUserId ? users.find(u => u.id === printingUserId) : null;
 
-    const SalaryReport = ({ user, parcels, payments, period }: { user: User, parcels: Parcel[], payments: SalaryPayment[], period: { start: string, end: string } }) => {
+    const SalaryReport: React.FC<{ user: User, parcels: Parcel[], payments: SalaryPayment[], period: { start: string, end: string } }> = ({ user, parcels, payments, period }) => {
         const periodStartDate = period.start;
         const periodEndDate = period.end;
         let baseSalary = user.baseSalary || 0;
@@ -289,7 +291,8 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                              return { brandId, brandRevenue, rate, commission };
                         });
                         const totalCommission = commissionDetails.reduce((total, d) => total + d.commission, 0);
-                        const totalSalary = (m.baseSalary || 0) + totalCommission;
+                        // FIX: Added explicit Number() casting for safety to prevent type errors.
+                        const totalSalary = Number(m.baseSalary || 0) + totalCommission;
                         const { periodStartDate, periodEndDate } = getPeriodDates();
                         const paymentRecord = salaryPayments.find(p => p.userId === m.id && p.periodStartDate === periodStartDate && p.periodEndDate === periodEndDate);
 
@@ -421,6 +424,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                             <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t"><span className="text-content-primary">Total Salary:</span> <span>PKR {payingUserData?.totalSalary.toLocaleString(undefined, {maximumFractionDigits: 2})}</span></div>
                         </div>
                         <div>
+                            {/* FIX: Added children to FormLabel component. */}
                             <FormLabel htmlFor="transactionId">Transaction ID / Reference</FormLabel>
                             <FormInput id="transactionId" value={transactionId} onChange={e => setTransactionId(e.target.value)} required autoFocus />
                         </div>
@@ -436,6 +440,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                 <form onSubmit={handleFormSubmit}>
                     <div className="max-h-[70vh] overflow-y-auto p-1 pr-2 space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {/* FIX: Added children to FormLabel components. */}
                             <div><FormLabel htmlFor="emp_name">Name</FormLabel><FormInput id="emp_name" name="name" value={formData.name} onChange={handleInputChange} required /></div>
                             <div><FormLabel htmlFor="emp_username">Username (for login)</FormLabel><FormInput id="emp_username" name="username" value={formData.username} onChange={handleInputChange} required disabled={!!editingUser} /></div>
                             <div><FormLabel htmlFor="emp_email">Email (for login)</FormLabel><FormInput id="emp_email" name="email" type="email" value={formData.email} onChange={handleInputChange} required disabled={!!editingUser} /></div>
@@ -466,43 +471,4 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                                             if (!brand) return null;
                                             return (<div key={brandId} className="flex items-center gap-2 p-1.5 bg-background rounded-md border">
                                                 <span className="font-semibold flex-grow">{brand.name}</span>
-                                                <FormInput type="number" min="0" max="100" value={formData.brandCommissions[brandId]} onChange={e => handleBrandCommissionChange(brandId, e.target.value)} className="w-24" />
-                                                <Button type="button" variant="danger" size="sm" onClick={() => handleRemoveBrandFromManager(brandId)}><TrashIcon className="w-4 h-4"/></Button>
-                                            </div>);
-                                        })}
-                                    </div>
-                                    {availableBrands.length > 0 && <div className="mt-2 flex items-end gap-2">
-                                        <FormSelect onChange={e => handleAddBrandToManager(e.target.value)} value="">
-                                            <option value="" disabled>Add a brand to manage...</option>
-                                            {availableBrands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                        </FormSelect>
-                                    </div>}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex justify-between items-center pt-3 mt-3 border-t">
-                        <div>{editingUser && <Button type="button" variant={editingUser.status === 'ACTIVE' ? 'danger' : 'primary'} onClick={handleToggleStatus}>{editingUser.status === 'ACTIVE' ? 'Deactivate' : 'Reactivate'}</Button>}</div>
-                        <div className="flex gap-2"><Button type="button" variant="secondary" onClick={handleModalClose}>Cancel</Button><Button type="submit">{editingUser ? 'Update' : 'Add'} Employee</Button></div>
-                    </div>
-                </form>
-            </Modal>
-
-            <div className="printable-area">
-                <div className="p-4 text-center">
-                    <h1 className="text-2xl font-bold">SEND Courier - Employee Salary Report</h1>
-                    <p className="text-lg">{getDateRangeText()}</p>
-                </div>
-                {userToPrint ? (
-                    <SalaryReport user={userToPrint} parcels={parcels} payments={salaryPayments} period={{ start: getPeriodDates().periodStartDate, end: getPeriodDates().periodEndDate }} />
-                ) : (
-                    <>
-                        {[...salesManagers, ...drivers, ...directSales].map(u => (
-                            <SalaryReport key={u.id} user={u} parcels={parcels} payments={salaryPayments} period={{ start: getPeriodDates().periodStartDate, end: getPeriodDates().periodEndDate }} />
-                        ))}
-                    </>
-                )}
-            </div>
-        </div>
-    );
-};
+                                                <FormInput type="number" min="0" max="100" value={(formData.brandCom

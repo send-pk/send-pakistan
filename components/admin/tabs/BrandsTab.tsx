@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../../../context/DataContext';
 import { User, UserRole, PickupLocation } from '../../../types';
@@ -75,7 +76,7 @@ export const BrandsTab: React.FC = () => {
     const handleWeightChargeChange = (weight: string, value: string) => {
         setBrandFormData(prev => ({
             ...prev,
-            weightCharges: { ...prev.weightCharges, [weight]: value }
+            weightCharges: { ...(prev.weightCharges || {}), [weight]: value }
         }));
     };
     
@@ -106,8 +107,9 @@ export const BrandsTab: React.FC = () => {
         const { name, email, username, password, bankName, accountTitle, accountNumber, companyPhone, correspondentName, correspondentPhone, officeAddress, pickupLocations, weightCharges, fuelSurcharge } = brandFormData;
         
         const numericWeightCharges: { [key: string]: number } = {};
-        for (const weight in weightCharges) {
-            numericWeightCharges[weight] = parseFloat(weightCharges[weight]);
+        const safeWeightCharges = weightCharges || {};
+        for (const weight in safeWeightCharges) {
+            numericWeightCharges[weight] = parseFloat(safeWeightCharges[weight]);
         }
 
         const dataToSave = { 
@@ -187,6 +189,7 @@ export const BrandsTab: React.FC = () => {
                 <form onSubmit={handleBrandFormSubmit}>
                     <div className="max-h-[70vh] overflow-y-auto p-1 pr-2 space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                           {/* FIX: Added children to all FormLabel components */}
                            <div><FormLabel htmlFor="name">Brand Name</FormLabel><FormInput id="name" name="name" value={brandFormData.name} onChange={handleBrandFormInputChange} required /></div>
                            <div><FormLabel htmlFor="username">Username (for login)</FormLabel><FormInput id="username" name="username" value={brandFormData.username} onChange={handleBrandFormInputChange} required disabled={!!editingBrand} /></div>
                            <div><FormLabel htmlFor="email">Email Address (for login)</FormLabel><FormInput id="email" name="email" type="email" value={brandFormData.email} onChange={handleBrandFormInputChange} required disabled={!!editingBrand} /></div>

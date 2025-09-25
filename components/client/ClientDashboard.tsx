@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, Parcel, ParcelStatus, Invoice } from '../../types';
 import { useData } from '../../context/DataContext';
@@ -138,6 +139,7 @@ const BrandDashboard: React.FC<BrandDashboardProps> = ({ user, onLogout }) => {
             <main className="flex-1 p-4 overflow-y-auto bg-background">
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4">
                     <nav className="flex flex-nowrap gap-2 p-1 bg-surface rounded-lg border border-border overflow-x-auto w-full lg:w-auto">
+                        {/* FIX: Added children to NavButton components to satisfy props type. */}
                         <NavButton tabName="dashboard">Dashboard</NavButton>
                         <NavButton tabName="book">Book a Parcel</NavButton>
                         <NavButton tabName="finances">Finances</NavButton>

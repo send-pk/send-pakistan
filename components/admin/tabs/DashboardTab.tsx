@@ -90,8 +90,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ parcels, allParcels,
     const { topBrands, topDrivers } = useMemo(() => {
         const brandCounts = parcels.reduce((acc, p) => ({ ...acc, [p.brandName]: (acc[p.brandName] || 0) + 1 }), {} as Record<string, number>);
         const driverCounts = parcels.filter(p => p.status === ParcelStatus.DELIVERED && p.deliveryDriverId).reduce((acc, p) => ({ ...acc, [p.deliveryDriverId!]: (acc[p.deliveryDriverId!] || 0) + 1 }), {} as Record<string, number>);
-        const sortedBrands = Object.entries(brandCounts).sort(([, a], [, b]) => b - a).slice(0, 5).map(([name, count]) => ({ name, count }));
-        const sortedDrivers = Object.entries(driverCounts).sort(([, a], [, b]) => b - a).slice(0, 5).map(([driverId, count]) => ({ name: users.find(u => u.id === driverId)?.name || 'Unknown', count, id: driverId }));
+        // FIX: Added explicit Number() casting to resolve potential type errors during arithmetic operations.
+        const sortedBrands = Object.entries(brandCounts).sort(([, a], [, b]) => Number(b) - Number(a)).slice(0, 5).map(([name, count]) => ({ name, count }));
+        // FIX: Added explicit Number() casting to resolve potential type errors during arithmetic operations.
+        const sortedDrivers = Object.entries(driverCounts).sort(([, a], [, b]) => Number(b) - Number(a)).slice(0, 5).map(([driverId, count]) => ({ name: users.find(u => u.id === driverId)?.name || 'Unknown', count, id: driverId }));
         return { topBrands: sortedBrands, topDrivers: sortedDrivers };
     }, [parcels, users]);
 

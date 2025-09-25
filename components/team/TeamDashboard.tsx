@@ -67,7 +67,8 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ user, onLogout }) => {
                     .reduce((sum, p) => sum + p.deliveryCharge + p.tax, 0);
                 return brandRevenue * (rate / 100);
             });
-            totalCommission = commissionDetails.reduce((total, commission) => total + commission, 0);
+            // FIX: Explicitly type the reduce callback parameters to avoid potential type errors.
+            totalCommission = commissionDetails.reduce((total: number, commission: number) => total + commission, 0);
         } else if (user.role === UserRole.DIRECT_SALES) {
             // Direct sales commission is on all company revenue in the period
             relevantParcels = parcelsInDateRange;
