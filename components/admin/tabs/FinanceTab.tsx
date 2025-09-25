@@ -262,17 +262,17 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ parcelsForDateRange, all
                         <h3 className="font-semibold text-content-primary mb-2">2. Enter Payment Details</h3>
                         <div className="space-y-3 p-2 bg-background rounded-lg border border-border">
                              <div>
-                                {/* FIX: Added children to FormLabel component. */}
+                                {/* FIX: Add children to FormLabel component. */}
                                 <FormLabel htmlFor="cashAmount">Cash Amount</FormLabel>
                                 <FormInput id="cashAmount" type="number" placeholder="0.00" value={reconCashAmount} onChange={e => setReconCashAmount(e.target.value)} />
                             </div>
                             <div className="space-y-2">
-                                {/* FIX: Added children to FormLabel component. */}
+                                {/* FIX: Add children to FormLabel component. */}
                                 <FormLabel>Online Transfers</FormLabel>
                                 <div className="max-h-40 overflow-y-auto space-y-2 pr-2">
                                     {reconTransfers.map((transfer, index) => (
                                         <div key={index} className="flex items-end gap-2 p-1.5 bg-surface border border-border rounded-md">
-                                            {/* FIX: Added children to FormLabel components. */}
+                                            {/* FIX: Add children to FormLabel components. */}
                                             <div className="flex-grow"><FormLabel htmlFor={`amount-${index}`} className="text-xs">Amount</FormLabel><FormInput id={`amount-${index}`} type="number" placeholder="Amount" value={transfer.amount} onChange={e => handleTransferChange(index, 'amount', e.target.value)} required/></div>
                                             <div className="flex-grow"><FormLabel htmlFor={`txid-${index}`} className="text-xs">Transaction ID (Optional)</FormLabel><FormInput id={`txid-${index}`} type="text" placeholder="Ref / Tx ID" value={transfer.transactionId} onChange={e => handleTransferChange(index, 'transactionId', e.target.value)} /></div>
                                             {reconTransfers.length > 1 && <Button type="button" variant="danger" size="sm" onClick={() => handleRemoveTransfer(index)} aria-label="Remove Transfer"><TrashIcon className="w-4 h-4"/></Button>}

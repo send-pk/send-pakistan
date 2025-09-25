@@ -28,12 +28,12 @@ const DynamicItemList: React.FC<{
             {items.map((item, index) => (
                 <div key={index} className="flex items-end gap-2">
                     <div className="w-24">
-                        {/* FIX: Added children to FormLabel component. */}
+                        {/* FIX: Add children to FormLabel component. */}
                         <FormLabel htmlFor={`itemQty-${index}`} className="text-xs">Qty</FormLabel>
                         <FormInput id={`itemQty-${index}`} type="number" min="1" value={item.quantity} onChange={(e) => onItemChange(index, 'quantity', parseInt(e.target.value, 10) || 1)} required />
                     </div>
                     <div className="flex-grow">
-                        {/* FIX: Added children to FormLabel component. */}
+                        {/* FIX: Add children to FormLabel component. */}
                         <FormLabel htmlFor={`itemName-${index}`} className="text-xs">Item Name</FormLabel>
                         <FormInput id={`itemName-${index}`} value={item.name} onChange={(e) => onItemChange(index, 'name', e.target.value)} placeholder="e.g., Lawn Suit" required />
                     </div>
@@ -116,18 +116,18 @@ export const ExchangeParcelModal: React.FC<ExchangeParcelModalProps> = ({ isOpen
                             <h3 className="font-semibold text-lg">New Outbound Parcel</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    {/* FIX: Added children to FormLabel component. */}
+                                    {/* FIX: Add children to FormLabel component. */}
                                     <FormLabel htmlFor="orderId">New Order ID</FormLabel>
                                     <FormInput id="orderId" name="orderId" value={formData.orderId} onChange={handleInputChange} required autoFocus/>
                                 </div>
                                 <div>
-                                    {/* FIX: Added children to FormLabel component. */}
+                                    {/* FIX: Add children to FormLabel component. */}
                                     <FormLabel htmlFor="codAmount">New COD Amount</FormLabel>
                                     <FormInput id="codAmount" name="codAmount" type="number" min="0" value={formData.codAmount} onChange={handleInputChange} required />
                                 </div>
                             </div>
                              <div>
-                                {/* FIX: Added children to FormLabel component. */}
+                                {/* FIX: Add children to FormLabel component. */}
                                 <FormLabel htmlFor="outboundItemDetails">Item(s) to Deliver</FormLabel>
                                 <FormInput id="outboundItemDetails" name="outboundItemDetails" value={formData.outboundItemDetails} onChange={handleInputChange} placeholder="e.g., 2x Lawn Suit" required />
                             </div>
@@ -139,7 +139,7 @@ export const ExchangeParcelModal: React.FC<ExchangeParcelModalProps> = ({ isOpen
                          <div className="space-y-3 p-3 bg-background rounded-lg border border-border">
                             <h3 className="font-semibold text-lg">Return Item(s)</h3>
                              <div>
-                                {/* FIX: Added children to FormLabel component. */}
+                                {/* FIX: Add children to FormLabel component. */}
                                 <FormLabel>Items to Collect</FormLabel>
                                 <DynamicItemList 
                                     items={formData.returnItems}
@@ -153,7 +153,7 @@ export const ExchangeParcelModal: React.FC<ExchangeParcelModalProps> = ({ isOpen
                 </div>
 
                  <div>
-                    {/* FIX: Added children to FormLabel component. */}
+                    {/* FIX: Add children to FormLabel component. */}
                     <FormLabel htmlFor="deliveryInstructions">Delivery Instructions (optional)</FormLabel>
                     <FormTextarea id="deliveryInstructions" name="deliveryInstructions" value={formData.deliveryInstructions} onChange={handleInputChange} rows={2} />
                 </div>

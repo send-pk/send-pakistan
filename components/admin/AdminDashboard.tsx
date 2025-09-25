@@ -151,7 +151,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4">
                     {user.role === UserRole.ADMIN && (
                         <nav className="flex flex-nowrap gap-2 p-1 bg-surface rounded-lg border border-border overflow-x-auto w-full lg:w-auto">
-                            {/* FIX: Added children to NavButton components to satisfy props type. */}
+                            {/* FIX: Add children to NavButton components to provide button text and icons. */}
                             <NavButton tabName="dashboard">Dashboard</NavButton>
                             <NavButton tabName="warehouse"><BuildingOfficeIcon className="w-4 h-4"/>Warehouse</NavButton>
                             <NavButton tabName="finance">Finance</NavButton>

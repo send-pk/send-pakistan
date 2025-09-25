@@ -96,11 +96,18 @@ const AppContent: React.FC = () => {
                     .eq('id', session.user.id)
                     .single();
                 
-                if (profileError) throw profileError;
-                if (!profile) throw new Error("Your account is valid, but we couldn't load your user profile. Please contact support.");
+                if (profileError) {
+                    console.error("Supabase profile fetch error:", profileError);
+                    throw new Error("Login successful, but a database error occurred while fetching your profile. Please contact support.");
+                }
+                if (!profile) {
+                    throw new Error("Login successful, but we couldn't access your user profile. This is likely a database permission issue (RLS). Please contact your system administrator.");
+                }
 
                 const userProfile = keysToCamel(profile) as User;
-                if (!userProfile.role) throw new Error("Your account does not have a valid role assigned. Please contact support.");
+                if (!userProfile.role) {
+                    throw new Error("Your account does not have a valid role assigned. Please contact support.");
+                }
                 
                 userProfile.role = userProfile.role.toUpperCase() as UserRole;
                 await fetchData();

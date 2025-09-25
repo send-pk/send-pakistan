@@ -43,7 +43,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // FIX: Destructure children from props. This can sometimes help with 'this' context issues in linters.
+    // FIX: Destructure children from this.props.
     const { children } = this.props;
     return children;
   }

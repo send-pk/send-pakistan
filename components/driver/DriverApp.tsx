@@ -265,7 +265,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
         };
     }, [isScannerOpen, onScanSuccess, handleCloseScannerModal]);
 
-    // FIX: Changed component definition to React.FC to fix `key` prop error.
+    // FIX: Change component definition to React.FC to fix `key` prop error.
     const ParcelCard: React.FC<{ parcel: Parcel }> = ({ parcel }) => {
         const isPickupTask = [ParcelStatus.BOOKED, ParcelStatus.OUT_FOR_RETURN].includes(parcel.status);
         const isDeliveryTask = [ParcelStatus.OUT_FOR_DELIVERY, ParcelStatus.DELIVERY_FAILED].includes(parcel.status);
@@ -405,7 +405,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
             <Modal isOpen={!!selectedParcel} onClose={handleCloseModal} title={`Update Status for ${selectedParcel?.trackingNumber}`}>
                 {selectedParcel && (
                     <form onSubmit={handleUpdateStatus} className="space-y-3">
-                        {/* FIX: Added children to FormLabel components. */}
+                        {/* FIX: Add children to FormLabel components. */}
                         <div><FormLabel htmlFor="newStatus">New Status</FormLabel><FormSelect id="newStatus" value={newStatus} onChange={e => setNewStatus(e.target.value as ParcelStatus)}>{getAvailableStatuses(selectedParcel).map(s => <option key={s} value={s}>{s}</option>)}</FormSelect></div>
                         {newStatus === ParcelStatus.DELIVERY_FAILED && (<>
                             <div><FormLabel htmlFor="failedAttemptReason">Reason for Failure</FormLabel><FormSelect id="failedAttemptReason" value={failedAttemptReason} onChange={e => setFailedAttemptReason(e.target.value)} required><option value="">Select a reason</option>{FAILED_ATTEMPT_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}</FormSelect></div>

@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../../../context/DataContext';
 import { User, UserRole, Parcel, ParcelStatus, SalaryPayment } from '../../../types';
@@ -291,7 +292,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                              return { brandId, brandRevenue, rate, commission };
                         });
                         const totalCommission = commissionDetails.reduce((total, d) => total + d.commission, 0);
-                        // FIX: Added explicit Number() casting for safety to prevent type errors.
+                        // FIX: Add explicit Number() casting for safety to prevent type errors.
                         const totalSalary = Number(m.baseSalary || 0) + totalCommission;
                         const { periodStartDate, periodEndDate } = getPeriodDates();
                         const paymentRecord = salaryPayments.find(p => p.userId === m.id && p.periodStartDate === periodStartDate && p.periodEndDate === periodEndDate);
@@ -424,7 +425,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                             <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t"><span className="text-content-primary">Total Salary:</span> <span>PKR {payingUserData?.totalSalary.toLocaleString(undefined, {maximumFractionDigits: 2})}</span></div>
                         </div>
                         <div>
-                            {/* FIX: Added children to FormLabel component. */}
+                            {/* FIX: Add children to FormLabel component. */}
                             <FormLabel htmlFor="transactionId">Transaction ID / Reference</FormLabel>
                             <FormInput id="transactionId" value={transactionId} onChange={e => setTransactionId(e.target.value)} required autoFocus />
                         </div>
@@ -440,7 +441,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                 <form onSubmit={handleFormSubmit}>
                     <div className="max-h-[70vh] overflow-y-auto p-1 pr-2 space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {/* FIX: Added children to FormLabel components. */}
+                            {/* FIX: Add children to FormLabel components. */}
                             <div><FormLabel htmlFor="emp_name">Name</FormLabel><FormInput id="emp_name" name="name" value={formData.name} onChange={handleInputChange} required /></div>
                             <div><FormLabel htmlFor="emp_username">Username (for login)</FormLabel><FormInput id="emp_username" name="username" value={formData.username} onChange={handleInputChange} required disabled={!!editingUser} /></div>
                             <div><FormLabel htmlFor="emp_email">Email (for login)</FormLabel><FormInput id="emp_email" name="email" type="email" value={formData.email} onChange={handleInputChange} required disabled={!!editingUser} /></div>
@@ -471,4 +472,56 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                                             if (!brand) return null;
                                             return (<div key={brandId} className="flex items-center gap-2 p-1.5 bg-background rounded-md border">
                                                 <span className="font-semibold flex-grow">{brand.name}</span>
-                                                <FormInput type="number" min="0" max="100" value={(formData.brandCom
+                                                <FormInput type="number" min="0" max="100" value={(formData.brandCommissions || {})[brandId] || '0'} onChange={e => handleBrandCommissionChange(brandId, e.target.value)} className="w-20" />
+                                                <Button type="button" variant="danger" size="sm" onClick={() => handleRemoveBrandFromManager(brandId)}><TrashIcon className="w-4 h-4" /></Button>
+                                            </div>)
+                                        })}
+                                    </div>
+                                    <div className="flex items-end gap-2 mt-2">
+                                        <div className="flex-grow">
+                                            <FormLabel>Add Brand</FormLabel>
+                                            <FormSelect value="" onChange={e => handleAddBrandToManager(e.target.value)}>
+                                                <option value="" disabled>Select brand to add</option>
+                                                {availableBrands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                            </FormSelect>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-3 mt-3 border-t border-border">
+                        <div>
+                            {editingUser && (
+                                <Button type="button" variant={editingUser.status === 'ACTIVE' ? 'danger' : 'primary'} onClick={handleToggleStatus}>
+                                    {editingUser.status === 'ACTIVE' ? 'Deactivate' : 'Reactivate'}
+                                </Button>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button type="button" variant="secondary" onClick={handleModalClose}>Cancel</Button>
+                            <Button type="submit">{editingUser ? 'Update' : 'Add'} Employee</Button>
+                        </div>
+                    </div>
+                </form>
+            </Modal>
+            
+            <div className="printable-area">
+                <div className="text-center mb-4">
+                    <h1 className="text-2xl font-bold">Salary Reports</h1>
+                    <p>{getDateRangeText()}</p>
+                </div>
+                {userToPrint ? (
+                     <SalaryReport user={userToPrint} parcels={parcels} payments={salaryPayments} period={{start: getPeriodDates().periodStartDate, end: getPeriodDates().periodEndDate}} />
+                ) : (
+                    <div className={printingUserId === null ? '' : 'hidden'}>
+                        {[...salesManagers, ...drivers, ...directSales].map(u => (
+                             <SalaryReport key={u.id} user={u} parcels={parcels} payments={salaryPayments} period={{start: getPeriodDates().periodStartDate, end: getPeriodDates().periodEndDate}} />
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};

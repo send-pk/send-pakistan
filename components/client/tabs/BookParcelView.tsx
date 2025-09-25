@@ -78,7 +78,7 @@ export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingS
             <h2 className="text-2xl font-bold mb-6 text-content-primary">Book a New Parcel</h2>
             <form onSubmit={handleBookParcel} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* FIX: Added children to all FormLabel components. */}
+                    {/* FIX: Add children to all FormLabel components. */}
                     <div> <FormLabel htmlFor="orderId">Order ID</FormLabel> <FormInput id="orderId" name="orderId" value={newParcel.orderId} onChange={handleInputChange} required /> </div>
                     <div> <FormLabel htmlFor="codAmount">Total COD Amount (PKR)</FormLabel> <FormInput id="codAmount" name="codAmount" type="number" min="0" value={newParcel.codAmount} onChange={handleInputChange} required /> </div>
                     <div> <FormLabel htmlFor="recipientName">Recipient Name</FormLabel> <FormInput id="recipientName" name="recipientName" value={newParcel.recipientName} onChange={handleInputChange} required /> </div>
