@@ -19,6 +19,9 @@ import { LogoutIcon } from '../icons/LogoutIcon';
 import { PENDING_PARCEL_STATUSES } from '../../constants';
 import { UsersIcon } from '../icons/UsersIcon';
 import { AlertTriangleIcon } from '../icons/AlertTriangleIcon';
+import { DollarSignIcon } from '../icons/DollarSignIcon';
+// Fix: Import TruckIcon
+import { TruckIcon } from '../icons/TruckIcon';
 
 // Helper to format date to YYYY-MM-DD for input fields
 const toInputDate = (date: Date) => {
@@ -151,12 +154,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4">
                     {user.role === UserRole.ADMIN && (
                         <nav className="flex flex-nowrap gap-2 p-1 bg-surface rounded-lg border border-border overflow-x-auto w-full lg:w-auto">
-                            {/* FIX: Add children to NavButton components to provide button text and icons. */}
                             <NavButton tabName="dashboard">Dashboard</NavButton>
                             <NavButton tabName="warehouse"><BuildingOfficeIcon className="w-4 h-4"/>Warehouse</NavButton>
-                            <NavButton tabName="finance">Finance</NavButton>
-                            <NavButton tabName="brands">Brands</NavButton>
-                            <NavButton tabName="drivers">Drivers</NavButton>
+                            <NavButton tabName="finance"><DollarSignIcon className="w-4 h-4"/>Finance</NavButton>
+                            <NavButton tabName="brands"><UsersIcon className="w-4 h-4"/>Brands</NavButton>
+                            <NavButton tabName="drivers"><TruckIcon className="w-4 h-4"/>Drivers</NavButton>
                             <NavButton tabName="sales"><UsersIcon className="w-4 h-4"/>Sales</NavButton>
                         </nav>
                     )}

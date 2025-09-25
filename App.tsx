@@ -98,10 +98,17 @@ const AppContent: React.FC = () => {
                 
                 if (profileError) {
                     console.error("Supabase profile fetch error:", profileError);
-                    throw new Error("Login successful, but a database error occurred while fetching your profile. Please contact support.");
+                    // Provide a very specific error message for the common RLS (Row Level Security) issue.
+                    if (profileError.code === '42501' || profileError.message.includes('permission denied')) {
+                        throw new Error("Login successful, but profile access was denied. This strongly indicates a database permission issue. Please ask your administrator to verify that Row Level Security (RLS) is configured correctly for the 'users' table, allowing authenticated users to read their own profile.");
+                    }
+                    // For other database errors, show the specific message from Supabase.
+                    throw new Error(`Login successful, but failed to fetch your profile. Database error: ${profileError.message}`);
                 }
+                
                 if (!profile) {
-                    throw new Error("Login successful, but we couldn't access your user profile. This is likely a database permission issue (RLS). Please contact your system administrator.");
+                    // This case is often a symptom of the same RLS issue where the query runs without error but returns 0 rows.
+                    throw new Error("Login successful, but your user profile could not be found. This is likely due to a Row Level Security (RLS) policy preventing access. Please contact your system administrator.");
                 }
 
                 const userProfile = keysToCamel(profile) as User;

@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../../../context/DataContext';
 import { User, UserRole, PickupLocation } from '../../../types';
@@ -190,7 +186,6 @@ export const BrandsTab: React.FC = () => {
                 <form onSubmit={handleBrandFormSubmit}>
                     <div className="max-h-[70vh] overflow-y-auto p-1 pr-2 space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                           {/* FIX: Add children to all FormLabel components. */}
                            <div><FormLabel htmlFor="name">Brand Name</FormLabel><FormInput id="name" name="name" value={brandFormData.name} onChange={handleBrandFormInputChange} required /></div>
                            <div><FormLabel htmlFor="username">Username (for login)</FormLabel><FormInput id="username" name="username" value={brandFormData.username} onChange={handleBrandFormInputChange} required disabled={!!editingBrand} /></div>
                            <div><FormLabel htmlFor="email">Email Address (for login)</FormLabel><FormInput id="email" name="email" type="email" value={brandFormData.email} onChange={handleBrandFormInputChange} required disabled={!!editingBrand} /></div>

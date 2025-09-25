@@ -53,14 +53,13 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ parcelsForDateRange, all
 
     const { readyForPayout, generatedPayouts } = useMemo(() => {
         const deliveredNotInvoiced = allParcels.filter(p => p.status === ParcelStatus.DELIVERED && !p.invoiceId);
-        // FIX: Explicitly type the accumulator in the reduce function to prevent type inference errors.
         const groupedByBrand = deliveredNotInvoiced.reduce((acc: Record<string, { brandName: string; parcels: Parcel[] }>, p) => {
             if (!acc[p.brandId]) {
                 acc[p.brandId] = { brandName: p.brandName, parcels: [] };
             }
             acc[p.brandId].parcels.push(p);
             return acc;
-        }, {});
+        }, {} as Record<string, { brandName: string; parcels: Parcel[] }>);
 
         const ready = Object.entries(groupedByBrand).map(([brandId, data]) => {
             const totalCOD = data.parcels.reduce((sum, p) => sum + p.codAmount, 0);
@@ -262,17 +261,14 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ parcelsForDateRange, all
                         <h3 className="font-semibold text-content-primary mb-2">2. Enter Payment Details</h3>
                         <div className="space-y-3 p-2 bg-background rounded-lg border border-border">
                              <div>
-                                {/* FIX: Add children to FormLabel component. */}
                                 <FormLabel htmlFor="cashAmount">Cash Amount</FormLabel>
                                 <FormInput id="cashAmount" type="number" placeholder="0.00" value={reconCashAmount} onChange={e => setReconCashAmount(e.target.value)} />
                             </div>
                             <div className="space-y-2">
-                                {/* FIX: Add children to FormLabel component. */}
                                 <FormLabel>Online Transfers</FormLabel>
                                 <div className="max-h-40 overflow-y-auto space-y-2 pr-2">
                                     {reconTransfers.map((transfer, index) => (
                                         <div key={index} className="flex items-end gap-2 p-1.5 bg-surface border border-border rounded-md">
-                                            {/* FIX: Add children to FormLabel components. */}
                                             <div className="flex-grow"><FormLabel htmlFor={`amount-${index}`} className="text-xs">Amount</FormLabel><FormInput id={`amount-${index}`} type="number" placeholder="Amount" value={transfer.amount} onChange={e => handleTransferChange(index, 'amount', e.target.value)} required/></div>
                                             <div className="flex-grow"><FormLabel htmlFor={`txid-${index}`} className="text-xs">Transaction ID (Optional)</FormLabel><FormInput id={`txid-${index}`} type="text" placeholder="Ref / Tx ID" value={transfer.transactionId} onChange={e => handleTransferChange(index, 'transactionId', e.target.value)} /></div>
                                             {reconTransfers.length > 1 && <Button type="button" variant="danger" size="sm" onClick={() => handleRemoveTransfer(index)} aria-label="Remove Transfer"><TrashIcon className="w-4 h-4"/></Button>}
