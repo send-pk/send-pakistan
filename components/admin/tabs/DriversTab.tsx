@@ -78,6 +78,7 @@ const ReassignJobsModal: React.FC<{
                     {pickupJobsCount > 0 ? (
                         <div className="flex items-end gap-2">
                             <div className="flex-grow">
+                                {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
                                 <FormLabel htmlFor="toDriverPickup">Assign To</FormLabel>
                                 <FormSelect id="toDriverPickup" value={toDriverPickup} onChange={e => setToDriverPickup(e.target.value)}>
                                     <option value="" disabled>Select a driver</option>

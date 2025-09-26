@@ -61,7 +61,8 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ parcelsForDateRange, all
             return acc;
         }, {} as Record<string, { brandName: string; parcels: Parcel[] }>);
 
-        const ready = Object.entries(groupedByBrand).map(([brandId, data]) => {
+        const ready = Object.keys(groupedByBrand).map((brandId) => {
+            const data = groupedByBrand[brandId];
             const totalCOD = data.parcels.reduce((sum, p) => sum + p.codAmount, 0);
             const totalCharges = data.parcels.reduce((sum, p) => sum + p.deliveryCharge, 0);
             const totalTax = data.parcels.reduce((sum, p) => sum + p.tax, 0);
@@ -261,6 +262,7 @@ export const FinanceTab: React.FC<FinanceTabProps> = ({ parcelsForDateRange, all
                         <h3 className="font-semibold text-content-primary mb-2">2. Enter Payment Details</h3>
                         <div className="space-y-3 p-2 bg-background rounded-lg border border-border">
                              <div>
+                                {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
                                 <FormLabel htmlFor="cashAmount">Cash Amount</FormLabel>
                                 <FormInput id="cashAmount" type="number" placeholder="0.00" value={reconCashAmount} onChange={e => setReconCashAmount(e.target.value)} />
                             </div>

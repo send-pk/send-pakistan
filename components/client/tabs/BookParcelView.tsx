@@ -85,6 +85,7 @@ export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingS
                 <form onSubmit={handleBookParcel} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
+                            {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
                             <FormLabel htmlFor="orderId">Order ID</FormLabel>
                             <FormInput id="orderId" name="orderId" value={newParcel.orderId} onChange={handleInputChange} required />
                         </div>

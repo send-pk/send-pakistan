@@ -404,6 +404,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
             <Modal isOpen={!!selectedParcel} onClose={handleCloseModal} title={`Update Status for ${selectedParcel?.trackingNumber}`}>
                 {selectedParcel && (
                     <form onSubmit={handleUpdateStatus} className="space-y-3">
+                        {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
                         <div><FormLabel htmlFor="newStatus">New Status</FormLabel><FormSelect id="newStatus" value={newStatus} onChange={e => setNewStatus(e.target.value as ParcelStatus)}>{getAvailableStatuses(selectedParcel).map(s => <option key={s} value={s}>{s}</option>)}</FormSelect></div>
                         {newStatus === ParcelStatus.DELIVERY_FAILED && (<>
                             <div><FormLabel htmlFor="failedAttemptReason">Reason for Failure</FormLabel><FormSelect id="failedAttemptReason" value={failedAttemptReason} onChange={e => setFailedAttemptReason(e.target.value)} required><option value="">Select a reason</option>{FAILED_ATTEMPT_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}</FormSelect></div>

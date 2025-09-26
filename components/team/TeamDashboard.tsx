@@ -76,8 +76,8 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ user, onLogout }) => {
         }
 
         const totalRevenue = relevantParcels.reduce((sum, p) => sum + p.deliveryCharge + p.tax, 0);
-// Fix: Ensure baseSalary is treated as a number in the sum.
-        const totalSalary = Number(user.baseSalary || 0) + totalCommission;
+        // FIX: Ensure baseSalary is treated as a number in the sum to prevent type errors.
+        const totalSalary = (user.baseSalary || 0) + totalCommission;
 
         return {
             parcels: relevantParcels,

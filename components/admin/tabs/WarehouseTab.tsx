@@ -208,6 +208,7 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
                             <p><strong>Current Status:</strong> {scannedParcel.status}</p>
                         </div>
                         <div>
+                            {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
                             <FormLabel htmlFor="newStatus">Select New Status</FormLabel>
                             <FormSelect id="newStatus" value={newStatus} onChange={e => setNewStatus(e.target.value as ParcelStatus)}>
                                 {getValidWarehouseStatuses(scannedParcel).map(s => <option key={s} value={s}>{s}</option>)}

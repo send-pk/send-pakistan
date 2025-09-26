@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from './shared/Card';
 import { Button } from './shared/Button';
@@ -6,6 +5,7 @@ import { ThemeToggle } from './shared/ThemeToggle';
 import { Logo } from './shared/Logo';
 import { supabase } from '../supabase';
 import { AlertTriangleIcon } from './icons/AlertTriangleIcon';
+import { GoogleIcon } from './icons/GoogleIcon';
 
 interface LoginScreenProps {
   authError: string | null;
@@ -71,6 +71,25 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ authError, clearAuthError }) 
         }
         setLoading(false);
     };
+    
+    const handleGoogleSignIn = async () => {
+        setLoading(true);
+        setError('');
+        if (authError) clearAuthError();
+
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin, // Redirect back to the app after login
+            },
+        });
+
+        if (error) {
+            setError(error.message);
+            setLoading(false);
+        }
+        // On success, Supabase redirects the user away, so no need to set loading to false here.
+    };
 
     const clearFormState = () => {
         setEmail('');
@@ -119,6 +138,29 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ authError, clearAuthError }) 
                                         {isLoginView ? 'Sign in to access your dashboard.' : 'Enter your details to get started.'}
                                     </p>
                                 </div>
+                                
+                                {isLoginView && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Button 
+                                                type="button"
+                                                variant="secondary" 
+                                                size="lg" 
+                                                className="w-full flex items-center justify-center gap-3" 
+                                                onClick={handleGoogleSignIn}
+                                                disabled={loading}
+                                            >
+                                                <GoogleIcon className="w-5 h-5" />
+                                                Sign in with Google
+                                            </Button>
+                                        </div>
+                                        <div className="flex items-center my-4">
+                                            <div className="flex-grow border-t border-border"></div>
+                                            <span className="flex-shrink mx-4 text-xs font-semibold text-content-muted tracking-wider">OR</span>
+                                            <div className="flex-grow border-t border-border"></div>
+                                        </div>
+                                    </>
+                                )}
 
                                 <form onSubmit={isLoginView ? handleLogin : handleSignUp} className="space-y-4">
                                     {!isLoginView && (

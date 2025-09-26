@@ -28,6 +28,7 @@ const DynamicItemList: React.FC<{
             {items.map((item, index) => (
                 <div key={index} className="flex items-end gap-2">
                     <div className="w-24">
+                        {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
                         <FormLabel htmlFor={`itemQty-${index}`} className="text-xs">Qty</FormLabel>
                         <FormInput id={`itemQty-${index}`} type="number" min="1" value={item.quantity} onChange={(e) => onItemChange(index, 'quantity', parseInt(e.target.value, 10) || 1)} required />
                     </div>
@@ -124,41 +125,28 @@ export const ExchangeParcelModal: React.FC<ExchangeParcelModalProps> = ({ isOpen
                             </div>
                              <div>
                                 <FormLabel htmlFor="outboundItemDetails">Item(s) to Deliver</FormLabel>
-                                <FormInput id="outboundItemDetails" name="outboundItemDetails" value={formData.outboundItemDetails} onChange={handleInputChange} placeholder="e.g., 2x Lawn Suit" required />
+                                <FormInput id="outboundItemDetails" name="outboundItemDetails" value={formData.outboundItemDetails} onChange={handleInputChange} placeholder="e.g., 1x Blue Shirt" required />
+                            </div>
+                            <div>
+                                <FormLabel htmlFor="deliveryInstructions">Delivery Instructions</FormLabel>
+                                <FormTextarea id="deliveryInstructions" name="deliveryInstructions" value={formData.deliveryInstructions} onChange={handleInputChange} rows={2} />
                             </div>
                         </div>
                     </div>
-
                     {/* Right Column */}
-                    <div className="space-y-3">
-                         <div className="space-y-3 p-3 bg-background rounded-lg border border-border">
-                            <h3 className="font-semibold text-lg">Return Item(s)</h3>
-                             <div>
-                                <FormLabel>Items to Collect</FormLabel>
-                                <DynamicItemList 
-                                    items={formData.returnItems}
-                                    onItemChange={handleItemChange}
-                                    onAddItem={handleAddItem}
-                                    onRemoveItem={handleRemoveItem}
-                                />
-                            </div>
-                        </div>
+                    <div className="space-y-3 p-3 bg-background rounded-lg border border-border">
+                        <h3 className="font-semibold text-lg">Item(s) to Collect from Customer</h3>
+                        <DynamicItemList
+                            items={formData.returnItems}
+                            onItemChange={handleItemChange}
+                            onAddItem={handleAddItem}
+                            onRemoveItem={handleRemoveItem}
+                        />
                     </div>
                 </div>
-
-                 <div>
-                    <FormLabel htmlFor="deliveryInstructions">Delivery Instructions (optional)</FormLabel>
-                    <FormTextarea id="deliveryInstructions" name="deliveryInstructions" value={formData.deliveryInstructions} onChange={handleInputChange} rows={2} />
-                </div>
-
-                <div className="p-3 bg-yellow-50 dark:bg-yellow-500/20 rounded-lg text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
-                    <p><strong>Instruction:</strong> Add an additional flyer in the parcel for customer to return the products.</p>
-                    <p><strong>Disclaimer:</strong> SEND is not responsible for exchanged product/s condition received from the customer.</p>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t border-border mt-3">
+                <div className="flex justify-end gap-2 pt-2 border-t border-border">
                     <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button type="submit">Initiate Exchange</Button>
+                    <Button type="submit">Book Exchange</Button>
                 </div>
             </form>
         </Modal>

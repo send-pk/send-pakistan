@@ -289,7 +289,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                              return { brandId, brandRevenue, rate, commission };
                         });
                         const totalCommission = commissionDetails.reduce((total, d) => total + d.commission, 0);
-                        const totalSalary = Number(m.baseSalary || 0) + totalCommission;
+                        const totalSalary = (m.baseSalary || 0) + totalCommission;
                         const { periodStartDate, periodEndDate } = getPeriodDates();
                         const paymentRecord = salaryPayments.find(p => p.userId === m.id && p.periodStartDate === periodStartDate && p.periodEndDate === periodEndDate);
 
@@ -376,8 +376,8 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                     <tbody>{directSales.map(s => {
                         const totalRevenue = parcels.reduce((sum, p) => sum + p.deliveryCharge + p.tax, 0);
                         const totalCommission = totalRevenue * ((s.commissionRate || 0) / 100);
-// Fix: Ensure baseSalary is treated as a number in the sum.
-                        const totalSalary = Number(s.baseSalary || 0) + totalCommission;
+                        {/* FIX: Ensure baseSalary is treated as a number in the sum to prevent type errors. */}
+                        const totalSalary = (s.baseSalary || 0) + totalCommission;
                         const { periodStartDate, periodEndDate } = getPeriodDates();
                         const paymentRecord = salaryPayments.find(p => p.userId === s.id && p.periodStartDate === periodStartDate && p.periodEndDate === periodEndDate);
 
@@ -437,6 +437,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({ parcels, dateFilter, customS
                 <form onSubmit={handleFormSubmit}>
                     <div className="max-h-[70vh] overflow-y-auto p-1 pr-2 space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
                             <div><FormLabel htmlFor="emp_name">Name</FormLabel><FormInput id="emp_name" name="name" value={formData.name} onChange={handleInputChange} required /></div>
                             <div><FormLabel htmlFor="emp_username">Username (for login)</FormLabel><FormInput id="emp_username" name="username" value={formData.username} onChange={handleInputChange} required disabled={!!editingUser} /></div>
                             <div><FormLabel htmlFor="emp_email">Email (for login)</FormLabel><FormInput id="emp_email" name="email" type="email" value={formData.email} onChange={handleInputChange} required disabled={!!editingUser} /></div>
