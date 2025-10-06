@@ -10,10 +10,13 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  // Removed 'public' keyword from state definition to fix a potential TypeScript compilation issue.
-  state: State = {
-    hasError: false
-  };
+  // Fix: Use a constructor to initialize state for better compatibility and to resolve potential 'this' context issues.
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false
+    };
+  }
 
   static getDerivedStateFromError(_: Error): State {
     return { hasError: true };
