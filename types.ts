@@ -10,29 +10,29 @@ export enum UserRole {
 
 export enum ParcelStatus {
   // Booking & Pickup
-  BOOKED = 'Booked',
-  PENDING_EXCHANGE_PICKUP = 'Pending Exchange Pickup', // For the return part of an exchange
-  PICKED_UP = 'Picked Up',
+  BOOKED = 'BOOKED',
+  PENDING_EXCHANGE_PICKUP = 'PENDING_EXCHANGE_PICKUP',
+  PICKED_UP = 'PICKED_UP',
   // At Warehouse/Hub
-  AT_HUB = 'At Hub',
+  AT_HUB = 'AT_HUB',
   // Delivery
-  OUT_FOR_DELIVERY = 'Out for Delivery',
-  DELIVERED = 'Delivered',
+  OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY',
+  DELIVERED = 'DELIVERED',
   // Delivery Exceptions
-  DELIVERY_FAILED = 'Delivery Failed',
-  CUSTOMER_REFUSED = 'Customer Refused',
-  DELIVERED_EXCHANGE_COMPLETE = 'Delivered & Exchange Collected', // Transient status for driver app
-  PENDING_DELIVERY = 'Pending Delivery', // After a failed attempt, back at warehouse
+  DELIVERY_FAILED = 'DELIVERY_FAILED',
+  CUSTOMER_REFUSED = 'CUSTOMER_REFUSED',
+  DELIVERED_EXCHANGE_COMPLETE = 'DELIVERED_EXCHANGE_COMPLETE',
+  PENDING_DELIVERY = 'PENDING_DELIVERY',
   // Return Flow
-  PENDING_RETURN = 'Pending Return',   // Brand has requested the parcel back
-  OUT_FOR_RETURN = 'Out for Return',
-  RETURNED = 'Returned',           // Returned to the brand/sender
+  PENDING_RETURN = 'PENDING_RETURN',
+  OUT_FOR_RETURN = 'OUT_FOR_RETURN',
+  RETURNED = 'RETURNED',
   // Other
-  CANCELED = 'Canceled',
-  LOST = 'Lost',
-  DAMAGED = 'Damaged',
-  FRAUDULENT = 'Fraudulent',
-  SOLVED = 'Solved',
+  CANCELED = 'CANCELED',
+  LOST = 'LOST',
+  DAMAGED = 'DAMAGED',
+  FRAUDULENT = 'FRAUDULENT',
+  SOLVED = 'SOLVED',
 }
 
 export interface DutyLogEvent {

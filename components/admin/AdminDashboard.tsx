@@ -1,4 +1,7 @@
-import React, { useState, useMemo } from 'react';
+
+
+
+import React, a { useState, useMemo } from 'react';
 import { User, UserRole, Parcel, ParcelStatus } from '../../types';
 import { useData } from '../../context/DataContext';
 import { Button } from '../shared/Button';
@@ -71,8 +74,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     (p.status === ParcelStatus.DELIVERED && p.codAmount > 0 && !p.isCodReconciled) || // Unreconciled COD
                     ((p.status === ParcelStatus.DELIVERED || p.status === ParcelStatus.RETURNED) && !p.invoiceId) || // Uninvoiced
                     (!!p.invoiceId && invoices.find(inv => inv.id === p.invoiceId)?.status === 'PENDING'); // Unpaid invoice
-                const isExceptionPending = [ParcelStatus.LOST, ParcelStatus.DAMAGED, ParcelStatus.FRAUDULENT].includes(p.status);
-                
+                const isExceptionPending = [ParcelStatus.LOST, ParcelStatus.DAMAGED, ParcelStatus.FRAUDULENT].includes(p.status) && p.status !== ParcelStatus.SOLVED;
+
                 const isActive = isOperationallyPending || isFinanciallyPending || isExceptionPending;
                 
                 // Show a parcel if it's active OR if it was created today.
@@ -81,7 +84,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         }
 
         // Custom date range logic
-        if (!customStartDate || !customEndDate) return allParcels;
         const start = new Date(new Date(customStartDate).setHours(0, 0, 0, 0));
         const end = new Date(new Date(customEndDate).setHours(23, 59, 59, 999));
         return allParcels.filter(p => {
@@ -90,22 +92,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         });
     }, [allParcels, invoices, dateFilter, customStartDate, customEndDate]);
 
-    const handleTrackParcel = (e: React.FormEvent) => {
-        e.preventDefault();
-        const p = allParcels.find(p => p.trackingNumber.toLowerCase() === trackingInput.toLowerCase());
-        setFoundParcel(p || null);
-        setTrackingError(p ? '' : 'No parcel found.');
-    };
-
-    const NavButton = ({ tabName, children }: {tabName: string, children: React.ReactNode}) => (
-      <button 
-        onClick={() => setActiveTab(tabName as any)} 
-        className={`px-3 py-2 font-semibold rounded-md transition-colors duration-200 text-sm flex items-center gap-2 flex-shrink-0 ${activeTab === tabName ? 'bg-primary/10 text-primary' : 'text-content-secondary hover:bg-border'}`}
-      >
-        {children}
-      </button>
-    );
+    const handleTrackParcel = (e: React.FormEvent) => { e.preventDefault(); const parcel = allParcels.find(p => p.trackingNumber.toLowerCase() === trackingInput.toLowerCase()); setFoundParcel(parcel || null); setTrackingError(parcel ? '' : 'No parcel found.'); };
     
+    const NavButton = ({ tabName, children }: { tabName: 'dashboard' | 'warehouse' | 'finance' | 'brands' | 'drivers' | 'sales', children: React.ReactNode }) => (
+        <button onClick={() => setActiveTab(tabName)} className={`px-3 py-2 font-semibold rounded-md transition-colors duration-200 text-sm flex-shrink-0 flex items-center gap-2 ${activeTab === tabName ? 'bg-primary text-white' : 'text-content-secondary hover:bg-border'}`}>
+            {children}
+        </button>
+    );
+
     if (loading) {
         return (
             <div className="flex flex-col justify-center items-center h-screen">
@@ -125,21 +119,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             </div>
         );
     }
-
+    
     return (
         <div className="flex flex-col h-screen bg-background">
             <header className="bg-surface px-4 md:px-6 py-2 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-2 z-10 border-b border-border sticky top-0">
-                <div className="flex items-center gap-3">
+                 <div className="flex items-center gap-3">
                     <Logo textClassName="text-2xl" iconClassName="w-5 h-5" />
                     <span className="text-content-muted">/</span>
-                    <span className="font-semibold text-content-primary">
-                        {user.role === UserRole.ADMIN ? 'Admin Portal' : 'Warehouse Portal'}
-                    </span>
+                    <span className="font-semibold text-content-primary">Admin Portal</span>
                 </div>
-                <div className="flex items-center flex-wrap justify-center md:justify-end gap-2">
+                 <div className="flex items-center flex-wrap justify-center md:justify-end gap-2">
                     <Button variant="secondary" onClick={() => setIsTrackingModalOpen(true)} className="flex items-center gap-2" aria-label="Track Parcel">
                          <SearchIcon className="w-4 h-4"/>
-                         <span className="hidden sm:inline">Track</span>
+                         <span className="hidden sm:inline">Track Any Parcel</span>
                     </Button>
                     <span className="hidden md:inline text-sm text-content-secondary">Welcome, {user.name}</span>
                     <ThemeToggle />
@@ -149,44 +141,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     </Button>
                 </div>
             </header>
-            
-            <main className="flex-1 p-4 overflow-y-auto bg-background">
-                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4">
-                    {user.role === UserRole.ADMIN && (
-                        <nav className="flex flex-nowrap gap-2 p-1 bg-surface rounded-lg border border-border overflow-x-auto w-full lg:w-auto">
-                            {/* FIX: Added children to NavButton components to resolve missing prop errors. */}
-                            <NavButton tabName="dashboard">Dashboard</NavButton>
-                            <NavButton tabName="warehouse"><BuildingOfficeIcon className="w-4 h-4"/>Warehouse</NavButton>
-                            <NavButton tabName="finance"><DollarSignIcon className="w-4 h-4"/>Finance</NavButton>
-                            <NavButton tabName="brands"><UsersIcon className="w-4 h-4"/>Brands</NavButton>
-                            <NavButton tabName="drivers"><TruckIcon className="w-4 h-4"/>Drivers</NavButton>
-                            <NavButton tabName="sales"><UsersIcon className="w-4 h-4"/>Sales</NavButton>
-                        </nav>
-                    )}
-                     {(user.role === UserRole.ADMIN) && (
-                        <div className="w-full lg:w-auto flex-shrink-0">
-                            <DateFilter
-                                dateFilter={dateFilter}
-                                setDateFilter={setDateFilter}
-                                customStartDate={customStartDate}
-                                setCustomStartDate={setCustomStartDate}
-                                customEndDate={customEndDate}
-                                setCustomEndDate={setCustomEndDate}
-                            />
-                        </div>
-                     )}
+            <main className="flex-1 p-4 overflow-y-auto bg-background main-bg">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4">
+                    <nav className="flex flex-nowrap gap-2 p-1 bg-surface rounded-lg border border-border overflow-x-auto w-full lg:w-auto">
+                        {/* Fix: Added children to all NavButton components to satisfy required prop. */}
+                        {user.role === UserRole.ADMIN && <NavButton tabName="dashboard">Dashboard</NavButton>}
+                        <NavButton tabName="warehouse"><BuildingOfficeIcon className="w-4 h-4" /> Warehouse</NavButton>
+                        {user.role === UserRole.ADMIN && <NavButton tabName="finance"><DollarSignIcon className="w-4 h-4" /> Finance</NavButton>}
+                        {user.role === UserRole.ADMIN && <NavButton tabName="brands"><UsersIcon className="w-4 h-4" /> Brands</NavButton>}
+                        {user.role === UserRole.ADMIN && <NavButton tabName="drivers"><TruckIcon className="w-4 h-4" /> Drivers</NavButton>}
+                        {user.role === UserRole.ADMIN && <NavButton tabName="sales"><UsersIcon className="w-4 h-4" /> Sales & Salary</NavButton>}
+                    </nav>
+                     <div className="w-full lg:w-auto flex-shrink-0">
+                        <DateFilter
+                            dateFilter={dateFilter}
+                            setDateFilter={setDateFilter}
+                            customStartDate={customStartDate}
+                            setCustomStartDate={setCustomStartDate}
+                            customEndDate={customEndDate}
+                            setCustomEndDate={setCustomEndDate}
+                        />
+                    </div>
                 </div>
-                <div className="space-y-4">
-                    {activeTab === 'dashboard' && user.role === UserRole.ADMIN && <DashboardTab parcels={parcels} allParcels={allParcels} users={users} user={user} />}
-                    {activeTab === 'warehouse' && <WarehouseTab user={user} />}
-                    {activeTab === 'finance' && user.role === UserRole.ADMIN && <FinanceTab parcelsForDateRange={parcels} allParcels={allParcels} users={users}/>}
-                    {activeTab === 'brands' && user.role === UserRole.ADMIN && <BrandsTab />}
-                    {activeTab === 'drivers' && user.role === UserRole.ADMIN && <DriversTab parcels={parcels} allParcels={allParcels} user={user} />}
-                    {activeTab === 'sales' && user.role === UserRole.ADMIN && <SalesTab parcels={parcels} dateFilter={dateFilter} customStartDate={customStartDate} customEndDate={customEndDate} />}
-                </div>
+                {activeTab === 'dashboard' && <DashboardTab parcels={parcels} allParcels={allParcels} users={users} user={user} />}
+                {activeTab === 'warehouse' && <WarehouseTab user={user} />}
+                {activeTab === 'finance' && <FinanceTab parcelsForDateRange={parcels} allParcels={allParcels} users={users} />}
+                {activeTab === 'brands' && <BrandsTab />}
+                {activeTab === 'drivers' && <DriversTab parcels={parcels} allParcels={allParcels} user={user} />}
+                {activeTab === 'sales' && <SalesTab parcels={parcels} dateFilter={dateFilter} customStartDate={customStartDate} customEndDate={customEndDate} />}
             </main>
-
-            <Modal isOpen={isTrackingModalOpen} onClose={() => { setIsTrackingModalOpen(false); setTrackingInput(''); setFoundParcel(null); setTrackingError(''); }} title="Track a Parcel">
+            
+            <ParcelDetailsModal isOpen={!!foundParcel} onClose={() => setFoundParcel(null)} parcel={foundParcel} user={user} />
+            
+            <Modal isOpen={isTrackingModalOpen} onClose={() => { setIsTrackingModalOpen(false); setTrackingInput(''); setFoundParcel(null); setTrackingError(''); }} title="Track Any Parcel">
                 <form onSubmit={handleTrackParcel}>
                     <div className="flex items-center gap-2">
                         <input type="text" placeholder="Enter Tracking Number" value={trackingInput} onChange={e => setTrackingInput(e.target.value)} autoFocus className={`w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors`} />
@@ -196,8 +183,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 {trackingError && <p className="text-red-500 mt-4">{trackingError}</p>}
                 {foundParcel && (<div className="mt-6"><ParcelDetailsModal isOpen={true} onClose={() => setFoundParcel(null)} parcel={foundParcel} user={user} /></div>)}
             </Modal>
-            
         </div>
     );
 };
+
 export default AdminDashboard;

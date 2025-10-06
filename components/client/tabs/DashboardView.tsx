@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo } from 'react';
 import { Parcel, ParcelStatus, User } from '../../../types';
 import { useData } from '../../../context/DataContext';
@@ -20,6 +22,7 @@ import { PackageIcon } from '../../icons/PackageIcon';
 import { DollarSignIcon } from '../../icons/DollarSignIcon';
 import { ExchangeParcelModal } from '../ExchangeParcelModal';
 import { ExchangeAirwayBill } from '../ExchangeAirwayBill';
+import { formatParcelStatus } from '../../../constants';
 
 const statusBadgeInfo: { [key in ParcelStatus]?: { icon: React.FC<React.SVGProps<SVGSVGElement>>, colorClasses: string } } = {
     [ParcelStatus.BOOKED]: { icon: ClockIcon, colorClasses: 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-500/20' },
@@ -208,9 +211,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, parcelsInDat
                                         {info && Icon ? (
                                             <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 text-xs font-semibold rounded-full ${info.colorClasses}`}>
                                                 <Icon className="w-3 h-3" />
-                                                {p.status}
+                                                {formatParcelStatus(p.status)}
                                             </span>
-                                        ) : p.status}
+                                        ) : formatParcelStatus(p.status)}
                                     </td>
                                     <td className="p-2">
                                         <div className="flex flex-col items-start gap-1">

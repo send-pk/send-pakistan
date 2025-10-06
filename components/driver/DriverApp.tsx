@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { User, Parcel, ParcelStatus, Item } from '../../types';
 import { useData } from '../../context/DataContext';
@@ -9,7 +12,7 @@ import { Logo } from '../shared/Logo';
 import { TruckIcon } from '../icons/TruckIcon';
 import { PackageIcon } from '../icons/PackageIcon';
 import { CheckBadgeIcon } from '../icons/CheckBadgeIcon';
-import { FAILED_ATTEMPT_REASONS, PENDING_PARCEL_STATUSES } from '../../constants';
+import { FAILED_ATTEMPT_REASONS, PENDING_PARCEL_STATUSES, formatParcelStatus } from '../../constants';
 import { CameraIcon } from '../icons/CameraIcon';
 import { SearchIcon } from '../icons/SearchIcon';
 import { ArrowPathIcon } from '../icons/ArrowPathIcon';
@@ -282,7 +285,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
                         <p className="font-mono text-sm text-primary font-semibold">{parcel.trackingNumber}</p>
                         <p className="text-xs text-content-muted">Order ID: {parcel.orderId}</p>
                     </div>
-                    <span className={`flex-shrink-0 ml-2 px-2.5 py-1 text-xs font-semibold rounded-full ${parcel.status === ParcelStatus.DELIVERY_FAILED ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{parcel.status}</span>
+                    <span className={`flex-shrink-0 ml-2 px-2.5 py-1 text-xs font-semibold rounded-full ${parcel.status === ParcelStatus.DELIVERY_FAILED ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{formatParcelStatus(parcel.status)}</span>
                 </div>
 
                 <hr className="border-border"/>
@@ -404,8 +407,8 @@ const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
             <Modal isOpen={!!selectedParcel} onClose={handleCloseModal} title={`Update Status for ${selectedParcel?.trackingNumber}`}>
                 {selectedParcel && (
                     <form onSubmit={handleUpdateStatus} className="space-y-3">
-                        {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
-                        <div><FormLabel htmlFor="newStatus">New Status</FormLabel><FormSelect id="newStatus" value={newStatus} onChange={e => setNewStatus(e.target.value as ParcelStatus)}>{getAvailableStatuses(selectedParcel).map(s => <option key={s} value={s}>{s}</option>)}</FormSelect></div>
+                        {/* Fix: Added children to FormLabel components. */}
+                        <div><FormLabel htmlFor="newStatus">New Status</FormLabel><FormSelect id="newStatus" value={newStatus} onChange={e => setNewStatus(e.target.value as ParcelStatus)}>{getAvailableStatuses(selectedParcel).map(s => <option key={s} value={s}>{formatParcelStatus(s)}</option>)}</FormSelect></div>
                         {newStatus === ParcelStatus.DELIVERY_FAILED && (<>
                             <div><FormLabel htmlFor="failedAttemptReason">Reason for Failure</FormLabel><FormSelect id="failedAttemptReason" value={failedAttemptReason} onChange={e => setFailedAttemptReason(e.target.value)} required><option value="">Select a reason</option>{FAILED_ATTEMPT_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}</FormSelect></div>
                             <div><FormLabel>Proof of Attempt (Photo)</FormLabel><Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-2"><CameraIcon className="w-5 h-5"/> {imagePreview ? "Change Photo" : "Take Photo"}</Button><input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleFileChange} className="hidden" required/>{imagePreview && <img src={imagePreview} alt="Proof of attempt" className="mt-4 rounded-lg max-h-40 w-auto mx-auto"/>}</div>

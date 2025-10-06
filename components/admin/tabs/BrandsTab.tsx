@@ -186,7 +186,7 @@ export const BrandsTab: React.FC = () => {
                 <form onSubmit={handleBrandFormSubmit}>
                     <div className="max-h-[70vh] overflow-y-auto p-1 pr-2 space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                           {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
+                           {/* Fix: Added children to FormLabel components. */}
                            <div><FormLabel htmlFor="name">Brand Name</FormLabel><FormInput id="name" name="name" value={brandFormData.name} onChange={handleBrandFormInputChange} required /></div>
                            <div><FormLabel htmlFor="username">Username (for login)</FormLabel><FormInput id="username" name="username" value={brandFormData.username} onChange={handleBrandFormInputChange} required disabled={!!editingBrand} /></div>
                            <div><FormLabel htmlFor="email">Email Address (for login)</FormLabel><FormInput id="email" name="email" type="email" value={brandFormData.email} onChange={handleBrandFormInputChange} required disabled={!!editingBrand} /></div>

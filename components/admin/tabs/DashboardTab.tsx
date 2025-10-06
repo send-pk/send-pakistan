@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Parcel, ParcelStatus, User } from '../../../types';
 import { Card } from '../../shared/Card';
@@ -17,12 +19,7 @@ import { Button } from '../../shared/Button';
 import { EditIcon } from '../../icons/EditIcon';
 import { XIcon } from '../../icons/XIcon';
 import { UserIcon } from '../../icons/UserIcon';
-
-const statusInfo: { [key in ParcelStatus]?: { icon: React.FC<React.SVGProps<SVGSVGElement>>, colorClasses: string } } = {
-    [ParcelStatus.BOOKED]: { icon: PackageIcon, colorClasses: 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/40' },
-    // ... other statuses mapped
-    [ParcelStatus.DELIVERED]: { icon: CheckCircleIcon, colorClasses: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/40' },
-};
+import { formatParcelStatus } from '../../../constants';
 
 const BulkEditModal: React.FC<{
     isOpen: boolean;
@@ -45,7 +42,7 @@ const BulkEditModal: React.FC<{
                     <label htmlFor="bulk-status" className="block mb-2 text-sm text-content-secondary font-medium">New Status</label>
                     <select id="bulk-status" value={status} onChange={e => setStatus(e.target.value as ParcelStatus)} className="w-full bg-surface border border-border rounded-md px-3 py-2 text-content-primary focus:border-primary focus:ring-1 focus:ring-primary transition-colors">
                         <option value="" disabled>Select a status</option>
-                        {allStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+                        {allStatuses.map(s => <option key={s} value={s}>{formatParcelStatus(s)}</option>)}
                     </select>
                 </div>
                 {status && (
@@ -135,7 +132,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ parcels, allParcels,
                     {(statusFilter !== 'all' || performerFilter) && (
                         <div className="flex items-center gap-2 text-sm bg-background p-1.5 rounded-lg border border-border">
                             <span className="font-semibold text-content-secondary">Filtering by:</span>
-                            {statusFilter !== 'all' && <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-md">{statusFilter}</span>}
+                            {statusFilter !== 'all' && <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-md">{formatParcelStatus(statusFilter as ParcelStatus)}</span>}
                             {performerFilter && <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-md">{performerFilter.value}</span>}
                             <button onClick={() => { setStatusFilter('all'); setPerformerFilter(null); }} className="p-1 rounded-full hover:bg-border"><XIcon className="w-4 h-4 text-content-secondary" /></button>
                         </div>
@@ -147,7 +144,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ parcels, allParcels,
                 </div>
                 <div className="overflow-x-auto"><table className="w-full text-left text-sm">
                     <thead className="border-b border-border bg-surface/50 text-content-secondary"><tr><th className="p-2 w-12"><Checkbox checked={allVisibleSelected} onChange={handleSelectAllVisible} aria-label="Select all visible parcels"/></th><th className="p-2 font-semibold">Tracking #</th><th className="p-2 font-semibold">Brand</th><th className="p-2 font-semibold">Recipient</th><th className="p-2 font-semibold">Status</th><th className="p-2 font-semibold text-right">COD</th></tr></thead>
-                    <tbody className="text-content-primary">{filteredParcels.map(p => (<tr key={p.id} onClick={() => setViewingParcel(p)} className={`border-b border-border last:border-b-0 hover:bg-surface cursor-pointer ${selectedParcels.has(p.id) ? 'bg-primary/10' : ''}`}><td className="p-2 w-12" onClick={e => e.stopPropagation()}><Checkbox checked={selectedParcels.has(p.id)} onChange={() => handleSelectParcel(p.id)} aria-label={`Select parcel ${p.trackingNumber}`}/></td><td className="p-2 text-primary font-medium">{p.trackingNumber}</td><td className="p-2">{p.brandName}</td><td className="p-2">{p.recipientName}</td><td className="p-2">{p.status}</td><td className="p-2 text-right font-semibold">PKR {p.codAmount.toLocaleString()}</td></tr>))}</tbody>
+                    <tbody className="text-content-primary">{filteredParcels.map(p => (<tr key={p.id} onClick={() => setViewingParcel(p)} className={`border-b border-border last:border-b-0 hover:bg-surface cursor-pointer ${selectedParcels.has(p.id) ? 'bg-primary/10' : ''}`}><td className="p-2 w-12" onClick={e => e.stopPropagation()}><Checkbox checked={selectedParcels.has(p.id)} onChange={() => handleSelectParcel(p.id)} aria-label={`Select parcel ${p.trackingNumber}`}/></td><td className="p-2 text-primary font-medium">{p.trackingNumber}</td><td className="p-2">{p.brandName}</td><td className="p-2">{p.recipientName}</td><td className="p-2">{formatParcelStatus(p.status)}</td><td className="p-2 text-right font-semibold">PKR {p.codAmount.toLocaleString()}</td></tr>))}</tbody>
                 </table></div>
                 {filteredParcels.length === 0 && <p className="text-center py-8 text-content-muted">No parcels match the current filters.</p>}
             </Card>

@@ -85,33 +85,39 @@ export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingS
                 <form onSubmit={handleBookParcel} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
+                            {/* Fix: Added children to FormLabel component. */}
                             <FormLabel htmlFor="orderId">Order ID</FormLabel>
                             <FormInput id="orderId" name="orderId" value={newParcel.orderId} onChange={handleInputChange} required />
                         </div>
                         <div>
+                            {/* Fix: Added children to FormLabel component. */}
                             <FormLabel htmlFor="recipientName">Recipient Name</FormLabel>
                             <FormInput id="recipientName" name="recipientName" value={newParcel.recipientName} onChange={handleInputChange} required />
                         </div>
                         <div>
+                            {/* Fix: Added children to FormLabel component. */}
                             <FormLabel htmlFor="recipientAddress">Recipient Address</FormLabel>
                             <FormInput id="recipientAddress" name="recipientAddress" value={newParcel.recipientAddress} onChange={handleInputChange} required />
                         </div>
                         <div>
+                            {/* Fix: Added children to FormLabel component. */}
                             <FormLabel htmlFor="recipientPhone">Recipient Phone</FormLabel>
                             <FormInput id="recipientPhone" name="recipientPhone" value={newParcel.recipientPhone} onChange={handleInputChange} required />
                         </div>
                         <div>
+                            {/* Fix: Added children to FormLabel component. */}
                             <FormLabel htmlFor="codAmount">Cash on Delivery Amount (PKR)</FormLabel>
                             <FormInput id="codAmount" name="codAmount" type="number" min="0" value={newParcel.codAmount} onChange={handleInputChange} required />
                         </div>
                         <div>
+                            {/* Fix: Added children to FormLabel component. */}
                             <FormLabel htmlFor="weight">Weight (kg)</FormLabel>
                             <FormSelect id="weight" name="weight" value={newParcel.weight} onChange={handleInputChange} required>
                                 {WEIGHT_TIERS.map(w => <option key={w} value={w}>{w.toFixed(1)} kg</option>)}
                             </FormSelect>
                         </div>
                          <div>
+                            {/* Fix: Added children to FormLabel component. */}
                             <FormLabel htmlFor="pickupLocationId">Pickup Location</FormLabel>
                             <FormSelect id="pickupLocationId" name="pickupLocationId" value={newParcel.pickupLocationId} onChange={handleInputChange} required>
                                 <option value="">Select a location</option>
@@ -120,16 +126,19 @@ export const BookParcelView: React.FC<BookParcelViewProps> = ({ user, onBookingS
                              {(!user.pickupLocations || user.pickupLocations.length === 0) && <p className="text-xs text-red-500 mt-1">No pickup locations configured. Please contact support.</p>}
                         </div>
                         <div>
+                            {/* Fix: Added children to FormLabel component. */}
                             <FormLabel htmlFor="itemDetails">Item Details</FormLabel>
                             <FormInput id="itemDetails" name="itemDetails" value={newParcel.itemDetails} onChange={handleInputChange} placeholder="e.g., 2x Lawn Suits" required />
                         </div>
                     </div>
                     <div>
+                        {/* Fix: Added children to FormLabel component. */}
                         <FormLabel htmlFor="deliveryInstructions">Delivery Instructions (Optional)</FormLabel>
                         <FormTextarea id="deliveryInstructions" name="deliveryInstructions" value={newParcel.deliveryInstructions} onChange={handleInputChange} rows={2} />
                     </div>
                     <div className="flex items-center gap-3">
                         <input type="checkbox" id="isOpenParcel" name="isOpenParcel" checked={newParcel.isOpenParcel} onChange={handleInputChange} className="h-4 w-4 rounded border-border text-primary focus:ring-primary"/>
+                        {/* Fix: Added children to FormLabel component. */}
                         <FormLabel htmlFor="isOpenParcel" className="mb-0">This is an "Open Parcel"</FormLabel>
                     </div>
 

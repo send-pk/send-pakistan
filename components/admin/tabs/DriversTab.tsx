@@ -78,7 +78,7 @@ const ReassignJobsModal: React.FC<{
                     {pickupJobsCount > 0 ? (
                         <div className="flex items-end gap-2">
                             <div className="flex-grow">
-                                {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
+                                {/* Fix: Added children to FormLabel component. */}
                                 <FormLabel htmlFor="toDriverPickup">Assign To</FormLabel>
                                 <FormSelect id="toDriverPickup" value={toDriverPickup} onChange={e => setToDriverPickup(e.target.value)}>
                                     <option value="" disabled>Select a driver</option>
@@ -101,6 +101,7 @@ const ReassignJobsModal: React.FC<{
                     {deliveryJobsCount > 0 ? (
                         <div className="flex items-end gap-2">
                             <div className="flex-grow">
+                                {/* Fix: Added children to FormLabel component. */}
                                 <FormLabel htmlFor="toDriverDelivery">Assign To</FormLabel>
                                 <FormSelect id="toDriverDelivery" value={toDriverDelivery} onChange={e => setToDriverDelivery(e.target.value)}>
                                     <option value="" disabled>Select a driver</option>
@@ -324,6 +325,7 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                             <div className="lg:col-span-2 space-y-2">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <div className="md:col-span-1 flex flex-col items-center gap-2 pt-2">
+                                        {/* Fix: Added children to FormLabel component. */}
                                         <FormLabel>Driver Photo</FormLabel>
                                         {imagePreview ? (
                                             <img src={imagePreview} alt="Driver preview" className="w-32 h-32 rounded-full object-cover border-2 border-border" />
@@ -339,6 +341,7 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                                     </div>
                                     <div className="md:col-span-2 space-y-2">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {/* Fix: Added children to FormLabel components. */}
                                             <div><FormLabel htmlFor="d_name">Driver Name</FormLabel><FormInput id="d_name" name="name" value={driverFormData.name} onChange={handleDriverFormInputChange} required /></div>
                                             <div><FormLabel htmlFor="d_username">Username</FormLabel><FormInput id="d_username" name="username" value={driverFormData.username} onChange={handleDriverFormInputChange} required disabled={!!editingDriver} /></div>
                                         </div>
@@ -357,6 +360,7 @@ export const DriversTab: React.FC<DriversTabProps> = ({ parcels, allParcels, use
                                     <div><FormLabel htmlFor="d_permanent_address">Permanent Address</FormLabel><FormTextarea id="d_permanent_address" name="permanentAddress" value={driverFormData.permanentAddress || ''} onChange={handleDriverFormInputChange} rows={2} /></div>
                                 </div>
                                 <div>
+                                    {/* Fix: Added children to FormLabel component. */}
                                     <FormLabel>Delivery Zones</FormLabel>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-2 bg-background rounded-md border border-border">
                                         {DELIVERY_ZONES.map(zone => (

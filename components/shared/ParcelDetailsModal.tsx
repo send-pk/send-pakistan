@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo } from 'react';
 import { Modal } from './Modal';
 import { Parcel, ParcelStatus, User, UserRole, Item } from '../../types';
@@ -12,6 +14,7 @@ import { AlertTriangleIcon } from '../icons/AlertTriangleIcon';
 import { Button } from './Button';
 import { ArrowPathIcon } from '../icons/ArrowPathIcon';
 import { HistoryIcon } from '../icons/HistoryIcon';
+import { formatParcelStatus } from '../../constants';
 
 const formatPKT = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -47,7 +50,7 @@ const renderTimeline = (parcel: Parcel) => {
                     <React.Fragment key={status}>
                         <div className="flex flex-col items-center flex-shrink-0">
                            <div className={`w-4 h-4 rounded-full ${index <= currentReturnIndex ? 'bg-orange-400 shadow-lg shadow-orange-400/40' : 'bg-border'} border-4 border-surface box-content`}></div>
-                           <p className={`text-xs mt-2 text-center w-24 font-medium ${index <= currentReturnIndex ? 'text-content-primary' : 'text-content-secondary'}`}>{status.replace(/ /g, '\n')}</p>
+                           <p className={`text-xs mt-2 text-center w-24 font-medium ${index <= currentReturnIndex ? 'text-content-primary' : 'text-content-secondary'}`}>{formatParcelStatus(status).replace(/ /g, '\n')}</p>
                         </div>
                         {index < returnTimeline.length - 1 && <div className={`flex-1 h-1 mx-1 min-w-[20px] ${index < currentReturnIndex ? 'bg-orange-400' : 'bg-border'}`}></div>}
                     </React.Fragment>
@@ -62,7 +65,7 @@ const renderTimeline = (parcel: Parcel) => {
                 <React.Fragment key={status}>
                     <div className="flex flex-col items-center flex-shrink-0">
                        <div className={`w-4 h-4 rounded-full ${index <= currentStatusIndex ? 'bg-primary shadow-lg shadow-primary/40' : 'bg-border'} border-4 border-surface box-content`}></div>
-                       <p className={`text-xs mt-2 text-center w-24 font-medium ${index <= currentStatusIndex ? 'text-content-primary' : 'text-content-secondary'}`}>{status.replace(/ /g, '\n')}</p>
+                       <p className={`text-xs mt-2 text-center w-24 font-medium ${index <= currentStatusIndex ? 'text-content-primary' : 'text-content-secondary'}`}>{formatParcelStatus(status).replace(/ /g, '\n')}</p>
                     </div>
                     {index < timelineStatuses.length - 1 && <div className={`flex-1 h-1 mx-1 min-w-[20px] ${index < currentStatusIndex ? 'bg-primary' : 'bg-border'}`}></div>}
                 </React.Fragment>
@@ -209,7 +212,7 @@ export const ParcelDetailsModal: React.FC<{ isOpen: boolean; onClose: () => void
                                     {parcel.history.slice().reverse().map((event, index) => (
                                         <div key={index} className="text-sm p-2 bg-surface rounded-md border border-border">
                                             <div className="flex justify-between items-start">
-                                                <p className="font-semibold text-content-primary">{event.status}</p>
+                                                <p className="font-semibold text-content-primary">{formatParcelStatus(event.status)}</p>
                                                 <p className="text-xs text-content-muted text-right flex-shrink-0 ml-2">
                                                     {formatPKT(event.createdAt)}
                                                 </p>

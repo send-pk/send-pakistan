@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../../../context/DataContext';
 import { Parcel, ParcelStatus, User, UserRole } from '../../../types';
@@ -9,7 +12,7 @@ import { StatCard } from '../shared/StatCards';
 import { BuildingOfficeIcon } from '../../icons/BuildingOfficeIcon';
 import { CameraIcon } from '../../icons/CameraIcon';
 import { ScanSuccessFeedback } from '../../shared/ScanSuccessFeedback';
-import { DELIVERY_ZONES } from '../../../constants';
+import { DELIVERY_ZONES, formatParcelStatus } from '../../../constants';
 
 declare var Html5Qrcode: any;
 
@@ -205,19 +208,20 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
                         <div>
                             <p><strong>Recipient:</strong> {scannedParcel.recipientName}</p>
                             <p><strong>Address:</strong> {scannedParcel.recipientAddress}</p>
-                            <p><strong>Current Status:</strong> {scannedParcel.status}</p>
+                            <p><strong>Current Status:</strong> {formatParcelStatus(scannedParcel.status)}</p>
                         </div>
                         <div>
-                            {/* FIX: Added children to FormLabel components to resolve missing prop errors. */}
+                            {/* Fix: Added children to FormLabel component. */}
                             <FormLabel htmlFor="newStatus">Select New Status</FormLabel>
                             <FormSelect id="newStatus" value={newStatus} onChange={e => setNewStatus(e.target.value as ParcelStatus)}>
-                                {getValidWarehouseStatuses(scannedParcel).map(s => <option key={s} value={s}>{s}</option>)}
+                                {getValidWarehouseStatuses(scannedParcel).map(s => <option key={s} value={s}>{formatParcelStatus(s)}</option>)}
                             </FormSelect>
                         </div>
 
                         {newStatus === ParcelStatus.AT_HUB && (
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
+                                    {/* Fix: Added children to FormLabel component. */}
                                     <FormLabel htmlFor="deliveryZone">Assign Delivery Zone</FormLabel>
                                     <FormSelect id="deliveryZone" value={selectedZone} onChange={e => setSelectedZone(e.target.value)} required>
                                         <option value="">Select a zone</option>
@@ -225,6 +229,7 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
                                     </FormSelect>
                                 </div>
                                  <div>
+                                    {/* Fix: Added children to FormLabel component. */}
                                     <FormLabel htmlFor="parcelWeight">Verify Parcel Weight (kg)</FormLabel>
                                     <FormInput id="parcelWeight" type="number" step="0.1" min="0.1" value={updatedWeight} onChange={e => setUpdatedWeight(e.target.value)} required />
                                 </div>
@@ -233,6 +238,7 @@ export const WarehouseTab: React.FC<WarehouseTabProps> = ({ user }) => {
 
                         {newStatus === ParcelStatus.OUT_FOR_DELIVERY && (
                             <div>
+                                {/* Fix: Added children to FormLabel component. */}
                                 <FormLabel htmlFor="deliveryDriver">Assign Delivery Driver</FormLabel>
                                 <FormSelect id="deliveryDriver" value={selectedDriverId} onChange={e => setSelectedDriverId(e.target.value)} required>
                                     <option value="">Select a driver for {scannedParcel.deliveryZone}</option>

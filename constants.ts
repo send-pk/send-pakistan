@@ -1,3 +1,4 @@
+
 import { UserRole, ParcelStatus } from './types';
 
 export const DELIVERY_ZONES = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4'];
@@ -38,3 +39,8 @@ export const PENDING_PARCEL_STATUSES = [
   ParcelStatus.PENDING_RETURN,
   ParcelStatus.OUT_FOR_RETURN,
 ];
+
+export const formatParcelStatus = (status: ParcelStatus | string): string => {
+    if (!status) return 'Unknown';
+    return status.replace(/_/g, ' ').replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+};
